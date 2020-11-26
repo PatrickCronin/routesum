@@ -175,7 +175,7 @@ func summarizeNetworksOneRound(srNets []safeRepNet) []safeRepNet {
 	numNets := len(sortedSRNets)
 	for i := 0; i < numNets; i++ {
 		if i < numNets-1 {
-			sum := trySumNetworks(sortedSRNets[i], sortedSRNets[i+1])
+			sum := trySumNets(sortedSRNets[i], sortedSRNets[i+1])
 			if sum != nil {
 				summary = append(summary, *sum)
 				i++
@@ -189,7 +189,7 @@ func summarizeNetworksOneRound(srNets []safeRepNet) []safeRepNet {
 	return summary
 }
 
-func trySumNetworks(a, b safeRepNet) *safeRepNet {
+func trySumNets(a, b safeRepNet) *safeRepNet {
 	// IPs from different families cannot be summarized
 	if len(a.IP) != len(b.IP) {
 		return nil
