@@ -21,7 +21,7 @@ strList := []string{
 summarized := routesum.Strings(strList)
 
 for _, s := range summarized {
-    fmt.Printf("%s\n", s.String())
+    fmt.Println(s.String())
 }
 ```
 
@@ -59,25 +59,23 @@ The `Strings` method accepts and returns a `[]string`, while the
 # Caveats (Maybe ToDos?)
 
 * **IPv4-embedded IPv6 addresses**: `routesum` make heavy use of Golang's
-  `net` package. The package prefers not to differentiate between an IPv4
-  address (e.g. 192.0.2.1) and its IPv4-embedded IPv6 counterpart
-  (i.e. ::ffff:192.0.2.1). In fact, if either were passed as input to
-  `net.ParseIP`, it would be impossible to know which version had been passed by
-  only by inspecting the returned `net.IP` data.
+  `net` package, which for some cases cannot differentiate between an IPv4
+  address (e.g. 192.0.2.1) and its IPv4-embedded IPv6 counterpart (i.e.
+  ::ffff:192.0.2.1).
 
-  Despite the `net` package's preference, `routesum` is able to differentiate
-  between IPv4 addresses and their IPv4-embedded IPv6 counterparts. Users of
-  `routesum.Strings` will not have to think about this at all, as the method
-  has access to the user-supplied IP and network strings. However, users of
-  `routesum.NetworksAndIPs` who care about differentiation will have to be
-  careful. Under the hood, `net.IP` data is a byte slice. Slices of length 4 can
-  store IPv4 addresses, and slices of length 16 can store either IPv4 or IPv6
-  addresses. (Byte slices of other lengths are not valid.) In order to ensure
-  that `routesum` can differentiate between IPv4 addresses and their IPv4-
-  embedded counterparts, users of `NetworksAndIPs` will need to ensure that IPv4
-  IPs provided to the method use the 4-byte representation. This can be
-  accomplished by replacing any IPv4-representing `net.IP` variable with the
-  result of calling `.To4()` on it.
+  Despite this, `routesum` _is_ able to differentiate between IPv4 addresses and
+  their IPv4-embedded IPv6 counterparts. Users of `routesum.Strings` will not
+  have to think about this at all, as the method uses the string representation
+  to determine the intent. However, users of `routesum.NetworksAndIPs` who care
+  about the distinction will have to be careful. Under the hood, `net.IP` data
+  is a byte slice. Slices of length 4 are used to represent IPv4 addresses, and
+  slices of length 16 are used to store either IPv4 or IPv6 addresses. (Byte
+  slices of other lengths are not valid.) In order to ensure that `routesum` can
+  differentiate between IPv4 addresses and their IPv4-embedded counterparts,
+  users of `NetworksAndIPs` will need to ensure that any IPv4 addresses provided
+  to the method use the 4-byte representation, and any IPv6 (or IPv4-embedded
+  IPv6) addresses use the 16-byte form. To get the 4-byte version of a `net.IP`
+  object, call `.To4()` on it.
 
 * **Zero-Host Networks**: To simplify its implementation, `routesum` internally
   converts IP addresses to 0-host networks (e.g. 192.0.2.1 => 192.0.2.1/32, and
