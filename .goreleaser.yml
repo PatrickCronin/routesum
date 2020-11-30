@@ -1,0 +1,70 @@
+project_name: 'routesum'
+
+before:
+  hooks:
+    - 'go mod tidy'
+
+builds:
+  - id: 'routesum'
+    main: './cmd/routesum/main.go'
+    binary: 'routesum'
+    goarch:
+      - '386'
+      - 'amd64'
+      - 'arm64'
+    goos:
+      - 'darwin'
+      - 'linux'
+      - 'windows'
+    ignore:
+      - goos: 'darwin'
+        goarch: '386'
+      - goos: 'linux'
+        goarch: 'arm64'
+      - goos: 'windows'
+        goarch: 'arm64'
+
+archives:
+  - id: 'routesum'
+    builds:
+      - 'routesum'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: x86-64
+      386: 'i386'
+      darwin: 'macOS'
+    wrap_in_directory: true
+    files:
+      - 'CHANGELOG.md'
+      - 'LICENSE.md'
+      - 'README.md'
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  skip: true
+
+nfpms:
+  - id: 'routesum'
+    builds:
+      - 'routesum'
+    homepage: 'https://github.com/PatrickCronin/routesum'
+    maintainer: 'Patrick Cronin <oshihuna@gmail.com>'
+    description: 'Summarize a list of IPs and networks to its shortest form.'
+    license: 'MIT'
+    formats:
+      - 'deb'
+      - 'rpm'
+    bindir: '/usr/bin'
+    files:
+      'CHANGELOG.md': '/usr/share/doc/routesum/CHANGELOG.md'
+      'LICENSE-APACHE': '/usr/share/doc/routesum/LICENSE-APACHE'
+      'LICENSE-MIT': '/usr/share/doc/routesum/LICENSE-MIT'
+      'README.md': '/usr/share/doc/routesum/README.md'
