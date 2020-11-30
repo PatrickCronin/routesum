@@ -12,16 +12,24 @@ import (
 func TestSimpleUsage(t *testing.T) {
 	in, err := ioutil.TempFile(os.TempDir(), "")
 	require.NoError(t, err, "create temp input file")
-	defer os.Remove(in.Name())
-	in.WriteString("1.1.1.0\n1.1.1.1\n")
+	defer func() {
+		err := os.Remove(in.Name())
+		require.NoError(t, err, "remove temp input file")
+	}()
+	_, err = in.WriteString("1.1.1.0\n1.1.1.1\n")
+	require.NoError(t, err, "write to temp input file")
 	err = in.Close()
 	require.NoError(t, err, "close temp input file")
 
 	out, err := ioutil.TempFile(os.TempDir(), "")
 	require.NoError(t, err, "create temp output file")
-	defer os.Remove(out.Name())
+	defer func() {
+		err := os.Remove(out.Name())
+		require.NoError(t, err, "remove temp output file")
+	}()
 
-	summarize(in.Name(), out.Name())
+	err = summarize(in.Name(), out.Name())
+	require.NoError(t, err, "summarize does not throw an error")
 
 	stdout := make([]byte, 50)
 	n, err := out.Read(stdout)

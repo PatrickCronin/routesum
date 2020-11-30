@@ -19,7 +19,7 @@ func TestSafeRepIPFromString(t *testing.T) {
 	for _, s := range invalidIPStrs {
 		_, err := newSafeRepIPFromString(s)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "error interpreting")
+			assert.Contains(t, err.Error(), "interpret IP")
 		}
 	}
 
@@ -42,9 +42,9 @@ func TestSafeRepIPFromString(t *testing.T) {
 	}
 	for _, test := range validIPTests {
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromString(test.input)
+			srIP, err := newSafeRepIPFromString(test.input) // nolint: scopelint
 			assert.NoError(t, err, "construct safeRepIP from string")
-			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected")
+			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
 		})
 	}
 }
@@ -56,7 +56,7 @@ func TestSafeRepIPFromNetIP(t *testing.T) {
 		assert.Contains(
 			t,
 			err.Error(),
-			"invalid input net.IP",
+			"interpret net.IP",
 		)
 	}
 
@@ -83,10 +83,9 @@ func TestSafeRepIPFromNetIP(t *testing.T) {
 	}
 	for _, test := range validIPTests {
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromNetIP(test.input)
+			srIP, err := newSafeRepIPFromNetIP(test.input) // nolint: scopelint
 			assert.NoError(t, err, "construct safeRepIP from net.IP")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected")
-
+			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
 		})
 	}
 }
@@ -105,7 +104,7 @@ func TestSafeRepNetFromString(t *testing.T) {
 	for _, s := range invalidNetStrs {
 		_, err := newSafeRepNetFromString(s)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "error interpreting")
+			assert.Contains(t, err.Error(), "interpret network")
 		}
 	}
 
@@ -147,14 +146,14 @@ func TestSafeRepNetFromString(t *testing.T) {
 	}
 	for _, test := range validNetTests {
 		t.Run(test.name, func(t *testing.T) {
-			srNet, err := newSafeRepNetFromString(test.input)
+			srNet, err := newSafeRepNetFromString(test.input) // nolint: scopelint
 			assert.NoError(t, err, "construct safeRepNet from string")
-			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected")
+			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected") // nolint: scopelint
 		})
 	}
 }
 
-func TestSafeRepNetFromNetIPNet(t *testing.T) {
+func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 	invalidIPNetTests := []struct {
 		name     string
 		input    net.IPNet
@@ -166,38 +165,47 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) {
 				IP:   net.IP([]byte{0xc0, 0x0, 0x2, 0x0, 0x0}),        // 192.0.2.0.0?
 				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0xff, 0x0}), // 255.255.255.255.0?
 			},
-			expected: "invalid input net.IPNet.IP",
+			expected: "interpret net.IPNet.IP",
 		},
 		{
 			name: "4-byte IPv4 IP with 16-byte mask",
 			input: net.IPNet{
-				IP:   net.IP([]byte{0xc0, 0x0, 0x2, 0x0}),                                                                               // 192.0.2.0
-				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0}), // ffff:ffff:ffff:ffff:ffff:ffff:ffff:ff00
+				IP: net.IP([]byte{0xc0, 0x0, 0x2, 0x0}), // 192.0.2.0
+				Mask: net.IPMask([]byte{ // ffff:ffff:ffff:ffff:ffff:ffff:ffff:ff00
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0,
+				}),
 			},
-			expected: "input network IP is different length than its mask",
+			expected: "network IP and mask are different lengths",
 		},
 		{
 			name: "16-byte IPv6 IP with 4-byte mask",
 			input: net.IPNet{
-				IP:   net.IP([]byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}), // 2001:db8::
-				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),                                                        // 255.255.255.0
+				IP: net.IP([]byte{ // 2001:db8::
+					0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				}),
+				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}), // 255.255.255.0
 			},
-			expected: "input network IP is different length than its mask",
+			expected: "network IP and mask are different lengths",
 		},
 		{
 			name: "16-byte IPv4-embedded IPv6 IP with 4-byte mask",
 			input: net.IPNet{
-				IP:   net.IP([]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xc0, 0x0, 0x2, 0x0}), // ::ffff:192.0.2.0
-				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),                                                         // 255.255.255.0
+				IP: net.IP([]byte{ // ::ffff:192.0.2.0
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0xff, 0xff, 0xc0, 0x0, 0x2, 0x0,
+				}),
+				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}), // 255.255.255.0
 			},
 			expected: "",
 		},
 	}
 	for _, test := range invalidIPNetTests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := newSafeRepNetFromNetIPNet(test.input)
+			_, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
 			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), test.expected)
+				assert.Contains(t, err.Error(), test.expected) // nolint: scopelint
 			}
 		})
 	}
@@ -218,26 +226,31 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) {
 		{
 			name: "16-byte net.IPNet from IPv4 address",
 			input: net.IPNet{
-				IP:   net.ParseIP("192.0.2.0").To16(),
-				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0}),
+				IP: net.ParseIP("192.0.2.0").To16(),
+				Mask: net.IPMask([]byte{
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0,
+				}),
 			},
 			expected: "::ffff:192.0.2.0/120",
 		},
 		{
 			name: "16-byte net.IPNet from IPv6 address",
 			input: net.IPNet{
-				IP:   net.ParseIP("2001::db8").To16(),
-				Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}),
+				IP: net.ParseIP("2001::db8").To16(),
+				Mask: net.IPMask([]byte{
+					0xff, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				}),
 			},
 			expected: "2001::db8/40",
 		},
 	}
 	for _, test := range validIPNetTests {
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepNetFromNetIPNet(test.input)
+			srIP, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
 			assert.NoError(t, err, "construct safeRepNet from net.IPNet")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected")
-
+			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected") // nolint: scopelint
 		})
 	}
 }

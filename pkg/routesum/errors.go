@@ -33,12 +33,12 @@ func (e *InvalidInputErr) Error() string {
 }
 
 // As determines if a given error is (or is wrapped by) an InvalidInputErr.
-func (e *InvalidInputErr) As(target error, saveTo *InvalidInputErr) bool {
-	t, ok := target.(*InvalidInputErr)
+func (e *InvalidInputErr) As(target error, saveTo **InvalidInputErr) bool {
+	t, ok := target.(*InvalidInputErr) // nolint: errorlint
 	if !ok {
 		return false
 	}
 
-	saveTo = t
+	*saveTo = t
 	return true
 }

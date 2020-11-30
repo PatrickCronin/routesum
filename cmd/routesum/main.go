@@ -10,14 +10,18 @@ import (
 
 func main() {
 	a := parseArgs()
-	summarize(a.inputPath, a.outputPath)
+
+	err := summarize(a.inputPath, a.outputPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
 }
 
-func summarize(inputPath, outputPath string) {
+func summarize(inputPath, outputPath string) error {
 	in, err := newInFile(inputPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "open input file: %s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("open input file: %w", err)
 	}
 	defer in.Close()
 
@@ -29,21 +33,20 @@ func summarize(inputPath, outputPath string) {
 
 	summarized, err := routesum.Strings(lines)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "summarize input: %s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("summarize input: %w", err)
 	}
 
 	out, err := newOutFile(outputPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "open output file: %s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("open output file: %w", err)
 	}
 	defer out.Close()
 
 	for _, s := range summarized {
 		if _, err := out.file.WriteString(s + "\n"); err != nil {
-			fmt.Fprintf(os.Stderr, "write line to output: %s", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("write output: %w", err)
 		}
 	}
+
+	return nil
 }

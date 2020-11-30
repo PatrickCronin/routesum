@@ -19,10 +19,10 @@ type safeRepIP net.IP
 func newSafeRepIPFromString(s string) (safeRepIP, error) {
 	ip := net.ParseIP(s)
 	if ip == nil {
-		return nil, fmt.Errorf("error interpreting %s as an IP", s)
+		return nil, fmt.Errorf("interpret IP: %w", newInvalidInputErrFromString(s))
 	}
 
-	if strings.Index(s, ":") != -1 { // intent is for an IPv6 IP
+	if strings.Contains(s, ":") { // intent is for an IPv6 IP
 		return safeRepIP(ip.To16()), nil
 	}
 
@@ -33,7 +33,7 @@ func newSafeRepIPFromString(s string) (safeRepIP, error) {
 func newSafeRepIPFromNetIP(ip net.IP) (safeRepIP, error) {
 	// ensure ip is valid
 	if ip.To16() == nil {
-		return nil, fmt.Errorf("invalid input net.IP: %#v", ip)
+		return nil, fmt.Errorf("interpret net.IP: %w", newInvalidInputErrFromNetIP(ip))
 	}
 
 	return safeRepIP(ip), nil
@@ -48,7 +48,7 @@ func (srIP safeRepIP) String() string {
 
 	// We trust the underlying routines for all IPv4 addresses, as well as
 	// IPv6 addresses that after stringifying still look like IPv6 addresses.
-	if len(srIP) == net.IPv4len || strings.Index(s, ":") != -1 {
+	if len(srIP) == net.IPv4len || strings.Contains(s, ":") {
 		return s
 	}
 
@@ -65,17 +65,17 @@ func (srIP safeRepIP) String() string {
 // Additionally, a safeRepNet's IP will always be the IP implied by the
 // network's IP and Mask combination.
 // The purpose of this type is not to abstact behavior, but to be sure you can
-// count on the above properties for a netowrk.
+// count on the above properties for a network.
 type safeRepNet net.IPNet
 
 func newSafeRepNetFromString(s string) (*safeRepNet, error) {
 	_, parsedNetwork, err := net.ParseCIDR(s)
 	if err != nil {
-		return nil, fmt.Errorf("error interpreting %s as a network: %w", s, err)
+		return nil, fmt.Errorf("interpret network: %w", newInvalidInputErrFromString(s))
 	}
 
 	var network net.IPNet
-	if strings.Index(s, ":") != -1 { // intent is for an IPv6 network
+	if strings.Contains(s, ":") { // intent is for an IPv6 network
 		network.IP = parsedNetwork.IP.To16()
 		network.Mask = resizeMask(parsedNetwork.Mask, net.IPv6len*8)
 	} else { // intent is for an IPv4 network
@@ -93,12 +93,12 @@ func newSafeRepNetFromString(s string) (*safeRepNet, error) {
 func newSafeRepNetFromNetIPNet(network net.IPNet) (*safeRepNet, error) {
 	// ensure ip is valid
 	if network.IP.To16() == nil {
-		return nil, fmt.Errorf("invalid input net.IPNet.IP: %#v", network.IP)
+		return nil, fmt.Errorf("interpret net.IPNet.IP: %w", newInvalidInputErrFromNetIP(network.IP))
 	}
 
 	// ensure mask is valid
 	if len(network.IP) != len(network.Mask) {
-		return nil, fmt.Errorf("input network IP is different length than its mask: %#v, %#v", network.IP, network.Mask)
+		return nil, fmt.Errorf("network IP and mask are different lengths: %w", newInvalidInputErrFromNetIPNet(network))
 	}
 
 	// ensure network IP is the IP implied by the IP and Mask combination
@@ -132,7 +132,7 @@ func (srNet safeRepNet) String() string {
 
 	// We trust the underlying routines for all IPv4 addresses, as well as
 	// IPv6 addresses that after stringifying still look like IPv6 addresses.
-	if len(srNet.IP) == net.IPv4len || strings.Index(s, ":") != -1 {
+	if len(srNet.IP) == net.IPv4len || strings.Contains(s, ":") {
 		return s
 	}
 
