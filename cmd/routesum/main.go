@@ -29,7 +29,7 @@ func summarize(inputPath, outputPath string) {
 
 	summarized, err := routesum.Strings(lines)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "summarize lines: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "summarize input: %s", err.Error())
 		os.Exit(1)
 	}
 

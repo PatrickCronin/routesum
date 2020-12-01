@@ -17,24 +17,20 @@ func Strings(strs []string) ([]string, error) {
 		if strings.Index(s, "/") != -1 {
 			srNet, err := newSafeRepNetFromString(s)
 			if err != nil {
-				return nil, fmt.Errorf("validate network: %w", err)
+				return nil, fmt.Errorf("validate network: %w", newInvalidInputErrFromString(s))
 			}
-
 			srNets = append(srNets, *srNet)
 		} else {
 			srIP, err := newSafeRepIPFromString(s)
 			if err != nil {
-				return nil, fmt.Errorf("validate IP: %w", err)
+				return nil, fmt.Errorf("validate IP: %w", newInvalidInputErrFromString(s))
 			}
 			srIPs = append(srIPs, srIP)
 		}
 	}
 
 	// Summarize
-	summarizedNetworks, remainingIPs, err := networksAndIPs(srNets, srIPs)
-	if err != nil {
-		return nil, fmt.Errorf("summarize networks and IPs: %w", err)
-	}
+	summarizedNetworks, remainingIPs := networksAndIPs(srNets, srIPs)
 
 	// Provide results in the same format we got them
 	summarizedStrs := make([]string, len(summarizedNetworks)+len(remainingIPs))
@@ -59,7 +55,7 @@ func NetworksAndIPs(
 	for _, network := range networks {
 		srNet, err := newSafeRepNetFromNetIPNet(network)
 		if err != nil {
-			return nil, nil, fmt.Errorf("validate network: %w", err)
+			return nil, nil, fmt.Errorf("validate network: %w", newInvalidInputErrFromNetIPNet(network))
 		}
 		srNets = append(srNets, *srNet)
 	}
@@ -68,16 +64,13 @@ func NetworksAndIPs(
 	for _, ip := range ips {
 		srIP, err := newSafeRepIPFromNetIP(ip)
 		if err != nil {
-			return nil, nil, fmt.Errorf("validate IP: %w", err)
+			return nil, nil, fmt.Errorf("validate IP: %w", newInvalidInputErrFromNetIP(ip))
 		}
 		srIPs = append(srIPs, srIP)
 	}
 
 	// Summarize
-	summarizedNetworks, remainingIPs, err := networksAndIPs(srNets, srIPs)
-	if err != nil {
-		return nil, nil, fmt.Errorf("summarize networks and IPs: %w", err)
-	}
+	summarizedNetworks, remainingIPs := networksAndIPs(srNets, srIPs)
 
 	// Provide results in the same format we got them
 	sumNets := make([]net.IPNet, len(summarizedNetworks))
@@ -96,7 +89,7 @@ func NetworksAndIPs(
 func networksAndIPs(
 	srNets []safeRepNet,
 	srIPs []safeRepIP,
-) ([]safeRepNet, []safeRepIP, error) {
+) ([]safeRepNet, []safeRepIP) {
 	// To simplify implementation, we translate any IPs to networks with a
 	// subnet mask indicating 0 hosts.
 	zeroHostMask := map[int]net.IPMask{
@@ -115,10 +108,7 @@ func networksAndIPs(
 	allNets := append(zeroHostNets, srNets...)
 	allCleanedNets := removeContainedNetworks(allNets)
 
-	summarizedNetworks, err := summarizeNetworks(allCleanedNets)
-	if err != nil {
-		return nil, nil, fmt.Errorf("summarize networks: %w", err)
-	}
+	summarizedNetworks := summarizeNetworks(allCleanedNets)
 
 	// Re-interpret the zero-host networks as IPs
 	var sumNets []safeRepNet
@@ -131,7 +121,7 @@ func networksAndIPs(
 		}
 	}
 
-	return sumNets, sumIPs, nil
+	return sumNets, sumIPs
 }
 
 // We remove any networks that are fully contained by another in the list. E.g.
@@ -157,7 +147,7 @@ candidate:
 	return nonContainedNets
 }
 
-func summarizeNetworks(srNets []safeRepNet) ([]safeRepNet, error) {
+func summarizeNetworks(srNets []safeRepNet) []safeRepNet {
 	thisRound := srNets
 	var lastRound []safeRepNet
 	for len(thisRound) != len(lastRound) { // Something was summarized
@@ -165,7 +155,7 @@ func summarizeNetworks(srNets []safeRepNet) ([]safeRepNet, error) {
 		thisRound = summarizeNetworksOneRound(lastRound)
 	}
 
-	return thisRound, nil
+	return thisRound
 }
 
 func summarizeNetworksOneRound(srNets []safeRepNet) []safeRepNet {
