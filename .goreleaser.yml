@@ -2,11 +2,12 @@ project_name: 'routesum'
 
 before:
   hooks:
+    - 'go mod download'
     - 'go mod tidy'
 
 builds:
   - id: 'routesum'
-    main: './cmd/routesum/main.go'
+    main: './cmd/routesum'
     binary: 'routesum'
     goarch:
       - '386'
@@ -65,6 +66,5 @@ nfpms:
     bindir: '/usr/bin'
     files:
       'CHANGELOG.md': '/usr/share/doc/routesum/CHANGELOG.md'
-      'LICENSE-APACHE': '/usr/share/doc/routesum/LICENSE-APACHE'
-      'LICENSE-MIT': '/usr/share/doc/routesum/LICENSE-MIT'
+      'LICENSE.md': '/usr/share/doc/routesum/LICENSE.md'
       'README.md': '/usr/share/doc/routesum/README.md'
