@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// InvalidInputErr represents an error with ingesting or validating input
+// InvalidInputErr represents an error ingesting or validating input
 type InvalidInputErr struct {
 	InvalidValue string
 }
@@ -28,6 +28,7 @@ func newInvalidInputErrFromNetIPNet(net net.IPNet) *InvalidInputErr {
 	}
 }
 
+// Error returns a stringified form of the error.
 func (e *InvalidInputErr) Error() string {
 	return fmt.Sprintf("'%s' was not understood.", e.InvalidValue)
 }

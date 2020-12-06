@@ -1,4 +1,4 @@
-// Package routesum summarizes a list of networks and IPs to its most succinct
+// Package routesum summarizes a list of IPs and networks to its shortest form.
 package routesum
 
 import (
@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// Strings summarizes routes from a list of (string representations of) networks
-// and IPs. Networks should be specified using CIDR notation.
+// Strings summarizes a slice of strings containing IPs and networks. Networks
+// should be specified using CIDR notation.
 func Strings(strs []string) ([]string, error) {
 	// Parse and validate
 	var srNets []safeRepNet
@@ -126,15 +126,16 @@ func networksAndIPs(
 }
 
 // We remove any networks that are fully contained by another in the list. E.g.
-// if 192.0.2.0/24 and 192.2.0.0/23 are both in the list, remove the former
-// as it's fully contained by the latter.
+// if 192.0.2.0/24 and 192.2.0.0/23 are both in the list, remove the former as
+// it's fully contained by the latter.
 func removeContainedNetworks(networks []safeRepNet) []safeRepNet {
 	candidateNets := sortNetworksFromBigToSmall(networks)
 	var nonContainedNets []safeRepNet
 candidate:
 	for _, candidate := range candidateNets {
 		for _, nonContainedNet := range nonContainedNets {
-			// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 == IPv4-embedded IPv6)
+			// staticcheck: we use bytes.Equal here because net.IP.Equal thinks
+			// IPv4 == IPv4-embedded IPv6)
 			if bytes.Equal( // nolint: staticcheck
 				candidate.IP.Mask(nonContainedNet.Mask),
 				nonContainedNet.IP,
@@ -194,7 +195,8 @@ func trySumNets(a, b safeRepNet) *safeRepNet {
 
 	// If the networks' base IPs are the same, there's nothing to summarize
 	// because we've already asserted that no networks are covered by others.
-	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 == IPv4-embedded IPv6)
+	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 ==
+	// IPv4-embedded IPv6)
 	if bytes.Equal(a.IP, b.IP) { // nolint: staticcheck
 		return nil
 	}
@@ -207,7 +209,8 @@ func trySumNets(a, b safeRepNet) *safeRepNet {
 	sumMask := net.CIDRMask(ones-1, bits)
 	networkA := a.IP.Mask(sumMask)
 
-	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 == IPv4-embedded IPv6)
+	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 ==
+	// IPv4-embedded IPv6)
 	if !bytes.Equal(networkA, b.IP.Mask(sumMask)) { // nolint: staticcheck
 		return nil
 	}
