@@ -1,3 +1,4 @@
+// Package routesum summarizes a list of IPs and networks to its shortest form.
 package routesum
 
 import (
@@ -7,19 +8,18 @@ import (
 	"strings"
 )
 
-// Strings summarizes routes from a list of (string representations of) networks
-// and IPs. Networks should be specified using CIDR notation.
+// Strings summarizes a slice of strings containing IPs and networks. Networks
+// should be specified using CIDR notation.
 func Strings(strs []string) ([]string, error) {
 	// Parse and validate
 	var srNets []safeRepNet
 	var srIPs []safeRepIP
 	for _, s := range strs {
-		if strings.Index(s, "/") != -1 {
+		if strings.Contains(s, "/") {
 			srNet, err := newSafeRepNetFromString(s)
 			if err != nil {
 				return nil, fmt.Errorf("validate network: %w", err)
 			}
-
 			srNets = append(srNets, *srNet)
 		} else {
 			srIP, err := newSafeRepIPFromString(s)
@@ -31,10 +31,7 @@ func Strings(strs []string) ([]string, error) {
 	}
 
 	// Summarize
-	summarizedNetworks, remainingIPs, err := networksAndIPs(srNets, srIPs)
-	if err != nil {
-		return nil, fmt.Errorf("summarize networks and IPs: %w", err)
-	}
+	summarizedNetworks, remainingIPs := networksAndIPs(srNets, srIPs)
 
 	// Provide results in the same format we got them
 	summarizedStrs := make([]string, len(summarizedNetworks)+len(remainingIPs))
@@ -55,29 +52,26 @@ func NetworksAndIPs(
 	ips []net.IP,
 ) ([]net.IPNet, []net.IP, error) {
 	// Validate
-	var srNets []safeRepNet
-	for _, network := range networks {
+	srNets := make([]safeRepNet, len(networks))
+	for i, network := range networks {
 		srNet, err := newSafeRepNetFromNetIPNet(network)
 		if err != nil {
 			return nil, nil, fmt.Errorf("validate network: %w", err)
 		}
-		srNets = append(srNets, *srNet)
+		srNets[i] = *srNet
 	}
 
-	var srIPs []safeRepIP
-	for _, ip := range ips {
+	srIPs := make([]safeRepIP, len(ips))
+	for i, ip := range ips {
 		srIP, err := newSafeRepIPFromNetIP(ip)
 		if err != nil {
 			return nil, nil, fmt.Errorf("validate IP: %w", err)
 		}
-		srIPs = append(srIPs, srIP)
+		srIPs[i] = srIP
 	}
 
 	// Summarize
-	summarizedNetworks, remainingIPs, err := networksAndIPs(srNets, srIPs)
-	if err != nil {
-		return nil, nil, fmt.Errorf("summarize networks and IPs: %w", err)
-	}
+	summarizedNetworks, remainingIPs := networksAndIPs(srNets, srIPs)
 
 	// Provide results in the same format we got them
 	sumNets := make([]net.IPNet, len(summarizedNetworks))
@@ -96,7 +90,7 @@ func NetworksAndIPs(
 func networksAndIPs(
 	srNets []safeRepNet,
 	srIPs []safeRepIP,
-) ([]safeRepNet, []safeRepIP, error) {
+) ([]safeRepNet, []safeRepIP) {
 	// To simplify implementation, we translate any IPs to networks with a
 	// subnet mask indicating 0 hosts.
 	zeroHostMask := map[int]net.IPMask{
@@ -115,38 +109,37 @@ func networksAndIPs(
 	allNets := append(zeroHostNets, srNets...)
 	allCleanedNets := removeContainedNetworks(allNets)
 
-	summarizedNetworks, err := summarizeNetworks(allCleanedNets)
-	if err != nil {
-		return nil, nil, fmt.Errorf("summarize networks: %w", err)
-	}
+	summarizedNetworks := summarizeNetworks(allCleanedNets)
 
 	// Re-interpret the zero-host networks as IPs
 	var sumNets []safeRepNet
 	var sumIPs []safeRepIP
 	for _, srNet := range summarizedNetworks {
-		if bytes.Compare(zeroHostMask[len(srNet.IP)], srNet.Mask) == 0 {
+		if bytes.Equal(zeroHostMask[len(srNet.IP)], srNet.Mask) {
 			sumIPs = append(sumIPs, safeRepIP(srNet.IP))
 		} else {
 			sumNets = append(sumNets, srNet)
 		}
 	}
 
-	return sumNets, sumIPs, nil
+	return sumNets, sumIPs
 }
 
 // We remove any networks that are fully contained by another in the list. E.g.
-// if 192.0.2.0/24 and 192.2.0.0/23 are both in the list, remove the former
-// as it's fully contained by the latter.
+// if 192.0.2.0/24 and 192.2.0.0/23 are both in the list, remove the former as
+// it's fully contained by the latter.
 func removeContainedNetworks(networks []safeRepNet) []safeRepNet {
 	candidateNets := sortNetworksFromBigToSmall(networks)
 	var nonContainedNets []safeRepNet
 candidate:
 	for _, candidate := range candidateNets {
 		for _, nonContainedNet := range nonContainedNets {
-			if bytes.Compare(
+			// staticcheck: we use bytes.Equal here because net.IP.Equal thinks
+			// IPv4 == IPv4-embedded IPv6)
+			if bytes.Equal( // nolint: staticcheck
 				candidate.IP.Mask(nonContainedNet.Mask),
 				nonContainedNet.IP,
-			) == 0 {
+			) {
 				continue candidate
 			}
 		}
@@ -157,7 +150,7 @@ candidate:
 	return nonContainedNets
 }
 
-func summarizeNetworks(srNets []safeRepNet) ([]safeRepNet, error) {
+func summarizeNetworks(srNets []safeRepNet) []safeRepNet {
 	thisRound := srNets
 	var lastRound []safeRepNet
 	for len(thisRound) != len(lastRound) { // Something was summarized
@@ -165,7 +158,7 @@ func summarizeNetworks(srNets []safeRepNet) ([]safeRepNet, error) {
 		thisRound = summarizeNetworksOneRound(lastRound)
 	}
 
-	return thisRound, nil
+	return thisRound
 }
 
 func summarizeNetworksOneRound(srNets []safeRepNet) []safeRepNet {
@@ -196,13 +189,15 @@ func trySumNets(a, b safeRepNet) *safeRepNet {
 	}
 
 	// IPs with different masks cannot be summarized
-	if bytes.Compare(a.Mask, b.Mask) != 0 {
+	if !bytes.Equal(a.Mask, b.Mask) {
 		return nil
 	}
 
 	// If the networks' base IPs are the same, there's nothing to summarize
 	// because we've already asserted that no networks are covered by others.
-	if bytes.Compare(a.IP, b.IP) == 0 {
+	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 ==
+	// IPv4-embedded IPv6)
+	if bytes.Equal(a.IP, b.IP) { // nolint: staticcheck
 		return nil
 	}
 
@@ -214,7 +209,9 @@ func trySumNets(a, b safeRepNet) *safeRepNet {
 	sumMask := net.CIDRMask(ones-1, bits)
 	networkA := a.IP.Mask(sumMask)
 
-	if bytes.Compare(networkA, b.IP.Mask(sumMask)) != 0 {
+	// staticcheck: we use bytes.Equal here because net.IP.Equal thinks IPv4 ==
+	// IPv4-embedded IPv6)
+	if !bytes.Equal(networkA, b.IP.Mask(sumMask)) { // nolint: staticcheck
 		return nil
 	}
 

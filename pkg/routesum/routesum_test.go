@@ -1,6 +1,8 @@
 package routesum
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"testing"
@@ -9,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStrings(t *testing.T) {
+func TestStrings(t *testing.T) { // nolint: funlen
 	// Summarization logic is tested in TestSummarize.
 
 	// Invalid IPs throw the expected error
@@ -19,11 +21,14 @@ func TestStrings(t *testing.T) {
 		"2001:db8:",
 		"not an IP",
 	}
-	invalidIPErr := regexp.MustCompile(`validate IP:.*error interpreting.*as an IP`)
+	invalidIPErr := regexp.MustCompile(`validate IP:.*was not understood\.`)
 	for _, invalidIP := range invalidIPs {
 		summarized, err := Strings([]string{invalidIP})
 		assert.Nil(t, summarized)
 		if assert.Error(t, err) {
+			var iiErr *InvalidInputErr
+			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
+			assert.Equal(t, invalidIP, iiErr.InvalidValue, "expected InvalidValue can be extracted")
 			assert.Regexp(t, invalidIPErr, err.Error())
 		}
 	}
@@ -38,11 +43,14 @@ func TestStrings(t *testing.T) {
 		"2001:db8::/129",
 		"not/a/network",
 	}
-	invalidNetErr := regexp.MustCompile(`validate network:.*error interpreting.*as a network`)
+	invalidNetErr := regexp.MustCompile(`validate network:.*was not understood\.`)
 	for _, invalidNet := range invalidNets {
 		summarized, err := Strings([]string{invalidNet})
 		assert.Nil(t, summarized)
 		if assert.Error(t, err) {
+			var iiErr *InvalidInputErr
+			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
+			assert.Equal(t, invalidNet, iiErr.InvalidValue, "expected InvalidValue can be extracted")
 			assert.Regexp(t, invalidNetErr, err.Error())
 		}
 	}
@@ -105,7 +113,7 @@ func TestStrings(t *testing.T) {
 	}
 }
 
-func TestNetworksAndIPs(t *testing.T) {
+func TestNetworksAndIPs(t *testing.T) { // nolint: funlen
 	// Summarization logic is tested in TestSummarize.
 
 	// Invalid IPs throw the expected error
@@ -117,12 +125,15 @@ func TestNetworksAndIPs(t *testing.T) {
 		[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-	invalidIPErr := regexp.MustCompile(`validate IP: invalid input net.IP`)
+	invalidIPErr := regexp.MustCompile(`validate IP:.*was not understood\.`)
 	for _, invalidIP := range invalidIPs {
 		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{}, []net.IP{invalidIP})
 		assert.Nil(t, sumNets)
 		assert.Nil(t, sumIPs)
 		if assert.Error(t, err) {
+			var iiErr *InvalidInputErr
+			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
+			assert.Equal(t, fmt.Sprintf("%#v", invalidIP), iiErr.InvalidValue, "expected InvalidValue can be extracted")
 			assert.Regexp(t, invalidIPErr, err.Error())
 		}
 	}
@@ -142,19 +153,25 @@ func TestNetworksAndIPs(t *testing.T) {
 			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
 		},
 		{
-			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0, 0},
-			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
+			IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0, 0},
+			Mask: []byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
+			},
 		},
 		{
 			IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
 		},
 		{
-			IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
+			IP: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Mask: []byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
+			},
 		},
 	}
-	invalidNetIPErr := regexp.MustCompile(`validate network: invalid input net.IPNet.IP`)
+	invalidNetIPErr := regexp.MustCompile(`validate network:.*was not understood\.`)
 	for _, invalidNetIP := range invalidNetIPs {
 		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{invalidNetIP}, []net.IP{})
 		assert.Nil(t, sumNets)
@@ -166,8 +183,11 @@ func TestNetworksAndIPs(t *testing.T) {
 
 	invalidNetMasks := []net.IPNet{
 		{
-			IP:   []byte{192, 0, 2, 0},
-			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			IP: []byte{192, 0, 2, 0},
+			Mask: []byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
 		},
 		{
 			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
@@ -178,7 +198,7 @@ func TestNetworksAndIPs(t *testing.T) {
 			Mask: []byte{255, 255, 255, 0},
 		},
 	}
-	invalidNetMaskErr := regexp.MustCompile(`validate network: input network IP is different length than its mask`)
+	invalidNetMaskErr := regexp.MustCompile(`validate network:.*was not understood\.`)
 	for _, invalidNetIP := range invalidNetMasks {
 		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{invalidNetIP}, []net.IP{})
 		assert.Nil(t, sumNets)
@@ -203,8 +223,11 @@ func TestNetworksAndIPs(t *testing.T) {
 					Mask: []byte{255, 255, 255, 0},
 				},
 				{
-					IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
+					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
+					Mask: []byte{
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
+					},
 				},
 				{
 					IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -222,8 +245,11 @@ func TestNetworksAndIPs(t *testing.T) {
 					Mask: []byte{255, 255, 255, 0},
 				},
 				{
-					IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
+					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
+					Mask: []byte{
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
+					},
 				},
 				{
 					IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -244,12 +270,18 @@ func TestNetworksAndIPs(t *testing.T) {
 					Mask: []byte{255, 255, 255, 255},
 				},
 				{
-					IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
+					Mask: []byte{
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					},
 				},
 				{
-					IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+					IP: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					Mask: []byte{
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					},
 				},
 			},
 			inputIPs: []net.IP{
@@ -288,7 +320,7 @@ func TestNetworksAndIPs(t *testing.T) {
 	}
 }
 
-func TestSummarize(t *testing.T) {
+func TestSummarize(t *testing.T) { // nolint: funlen
 	tests := []struct {
 		name     string
 		input    []string
@@ -587,7 +619,7 @@ func TestSummarize(t *testing.T) {
 			},
 		},
 		{
-			name: "documented caveat: zero-host networks are treated as IPv4 addresses",
+			name: "documented caveat: zero-host networks are treated as IP addresses",
 			input: []string{
 				"192.0.2.0/32",
 				"::ffff:192.0.2.0/128",
@@ -600,7 +632,7 @@ func TestSummarize(t *testing.T) {
 			},
 		},
 		{
-			name: "documented caveat: zero-host networks are removed as duplicates if IP counterparts are already present",
+			name: "documented caveat: zero-host networks are removed if IP counterparts are already present",
 			input: []string{
 				"192.0.2.0",
 				"192.0.2.0/32",
@@ -686,7 +718,7 @@ func TestRemoveContainedNetworks(t *testing.T) {
 	}
 }
 
-func TestTrySumNets(t *testing.T) {
+func TestTrySumNets(t *testing.T) { // nolint: funlen
 	tests := []struct {
 		name     string
 		nets     [2]string

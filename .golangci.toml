@@ -1,0 +1,66 @@
+[run]
+  deadline = "1m"
+  tests = true
+
+[linters]
+  disable-all = true
+  enable = [
+    "asciicheck",
+    "deadcode",
+    "dogsled",
+    "errcheck",
+    "errorlint",
+    "exhaustive",
+    "exhaustivestruct",
+    "exportloopref",
+    "funlen",
+    "gochecknoglobals",
+    "goconst",
+    "gocyclo",
+    "gocritic",
+    "goerr113",
+    "gofumpt",
+    "goimports",
+    "golint",
+    "gosec",
+    "gosimple",
+    "govet",
+    "ineffassign",
+    "lll",
+    "maligned",
+    "misspell",
+    "nakedret",
+    "nolintlint",
+    "prealloc",
+    "scopelint",
+    "staticcheck",
+    "structcheck",
+    "stylecheck",
+    "typecheck",
+    "unconvert",
+    "unparam",
+    "unused",
+    "varcheck",
+    "vetshadow",
+    "wrapcheck",
+  ]
+
+[linters-settings.exhaustive]
+  default-signifies-exhaustive = true
+
+[linters-settings.gofumpt]
+  extra-rules = true
+
+[linters-settings.lll]
+  line-length = 120
+  tab-width = 4
+
+[issues]
+  exclude-use-default = false
+
+  [[issues.exclude-rules]]
+  linters = [
+    "gosec"
+  ]
+  # G306 - "Expect WriteFile permissions to be 0600 or less".
+  text = "G306"
