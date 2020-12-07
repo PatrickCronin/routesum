@@ -16,7 +16,7 @@ func TestSimpleUsage(t *testing.T) {
 		err := os.Remove(in.Name())
 		require.NoError(t, err, "remove temp input file")
 	}()
-	_, err = in.WriteString("1.1.1.0\n1.1.1.1\n")
+	_, err = in.WriteString("192.0.2.0\n192.0.2.1\n")
 	require.NoError(t, err, "write to temp input file")
 	err = in.Close()
 	require.NoError(t, err, "close temp input file")
@@ -34,5 +34,5 @@ func TestSimpleUsage(t *testing.T) {
 	stdout := make([]byte, 50)
 	n, err := out.Read(stdout)
 	require.NoError(t, err, "read program stdout")
-	assert.Equal(t, "1.1.1.0/31\n", string(stdout[:n]), "read expected bytes")
+	assert.Equal(t, "192.0.2.0/31\n", string(stdout[:n]), "read expected bytes")
 }
