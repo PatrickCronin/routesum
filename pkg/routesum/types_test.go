@@ -42,10 +42,11 @@ func TestSafeRepIPFromString(t *testing.T) {
 		},
 	}
 	for _, test := range validIPTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromString(test.input) // nolint: scopelint
+			srIP, err := newSafeRepIPFromString(test.input)
 			assert.NoError(t, err, "construct safeRepIP from string")
-			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected")
 		})
 	}
 }
@@ -83,15 +84,16 @@ func TestSafeRepIPFromNetIP(t *testing.T) {
 		},
 	}
 	for _, test := range validIPTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromNetIP(test.input) // nolint: scopelint
+			srIP, err := newSafeRepIPFromNetIP(test.input)
 			assert.NoError(t, err, "construct safeRepIP from net.IP")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected")
 		})
 	}
 }
 
-func TestSafeRepNetFromString(t *testing.T) {
+func TestSafeRepNetFromString(t *testing.T) { // nolint: funlen
 	invalidNetStrs := []string{
 		"192.0.2/29",
 		"192.0.2.0.0/29",
@@ -146,10 +148,11 @@ func TestSafeRepNetFromString(t *testing.T) {
 		},
 	}
 	for _, test := range validNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srNet, err := newSafeRepNetFromString(test.input) // nolint: scopelint
+			srNet, err := newSafeRepNetFromString(test.input)
 			assert.NoError(t, err, "construct safeRepNet from string")
-			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected")
 		})
 	}
 }
@@ -203,10 +206,11 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 		},
 	}
 	for _, test := range invalidIPNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			_, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
+			_, err := newSafeRepNetFromNetIPNet(test.input)
 			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), test.expected) // nolint: scopelint
+				assert.Contains(t, err.Error(), test.expected)
 			}
 		})
 	}
@@ -248,10 +252,11 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 		},
 	}
 	for _, test := range validIPNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
+			srIP, err := newSafeRepNetFromNetIPNet(test.input)
 			assert.NoError(t, err, "construct safeRepNet from net.IPNet")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected")
 		})
 	}
 }
