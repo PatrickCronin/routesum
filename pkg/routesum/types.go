@@ -108,6 +108,8 @@ func newSafeRepNetFromNetIPNet(network net.IPNet) (*safeRepNet, error) {
 	return &srNet, nil
 }
 
+// resizeMask changes the length of the mask while retaining the number of host
+// bits (the zeros)
 func resizeMask(m net.IPMask, wantBits int) net.IPMask {
 	onesBits, haveBits := m.Size()
 	if haveBits == wantBits {

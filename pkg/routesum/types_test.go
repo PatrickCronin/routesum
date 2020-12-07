@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSafeRepIPFromString(t *testing.T) {
@@ -251,6 +252,47 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 			srIP, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
 			assert.NoError(t, err, "construct safeRepNet from net.IPNet")
 			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected") // nolint: scopelint
+		})
+	}
+}
+
+func TestResizeMask(t *testing.T) {
+	// In the event that net.ParseCIDR ever returns a Mask whose length don't
+	// match it's IP length, we resize it. This does seem a bit paranoid, but
+	// but if it does happen, we'll be ready.
+	tests := []struct {
+		name             string
+		input            string
+		resizeMaskToBits int
+		expected         net.IPMask
+	}{
+		{
+			name:             "IPv4 to IPv6",
+			input:            "192.0.2.0/28",
+			resizeMaskToBits: net.IPv6len * 8,
+			expected: net.IPMask([]byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0,
+			}),
+		},
+		{
+			name:             "IPv6 to IPv4",
+			input:            "2001:db8::1/124",
+			resizeMaskToBits: net.IPv4len * 8,
+			expected:         net.IPMask([]byte{255, 255, 255, 240}),
+		},
+	}
+
+	for _, test := range tests {
+		// nolint: scopelint
+		t.Run(test.name, func(t *testing.T) {
+			_, parsedNetwork, err := net.ParseCIDR(test.input)
+			require.NoError(t, err, "parse input network")
+			assert.Equal(
+				t,
+				test.expected,
+				resizeMask(parsedNetwork.Mask, test.resizeMaskToBits),
+			)
 		})
 	}
 }
