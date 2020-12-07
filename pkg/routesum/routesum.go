@@ -203,6 +203,10 @@ func trySumNets(a, b safeRepNet) *safeRepNet {
 
 	ones, bits := a.Mask.Size()
 	if ones == 0 {
+		// Zero-network hosts cannot be summarized. This is more of an error
+		// check as the only condition I can foresee getting here is if the
+		// networks shared the same base IP, and that is checked directly
+		// above.
 		return nil
 	}
 
