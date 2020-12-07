@@ -9,3 +9,6 @@
 
 # The driver program
 cmd/routesum/routesum
+
+# Goreleaser artifacts
+dist
