@@ -6,6 +6,7 @@
 ![golangci-lint](https://github.com/PatrickCronin/routesum/workflows/golangci-lint/badge.svg)
 [![Coverage
 Status](https://coveralls.io/repos/github/PatrickCronin/routesum/badge.svg)](https://coveralls.io/github/PatrickCronin/routesum)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/PatrickCronin/routesum/pkg/routesum)](https://pkg.go.dev/github.com/PatrickCronin/routesum/pkg/routesum)
 
 * [Project Description](#project-description)
 * [Notice of Beta Status](#notice-of-beta-status)
@@ -146,6 +147,9 @@ The `routesum` library provides two methods for users:
   slice of `net.IP` IP addresses. Users of this methods should be sure to see
   the below-mentioned caveat on IPv4-embedded IPv6 if differentiating between
   IPv4-embedded IPv6 addresses from their IPv4 counterparts is important.
+
+Library documentation is viewable in the code, or at
+[pkg.go.dev](https://pkg.go.dev/github.com/PatrickCronin/routesum/pkg/routesum).
 
 ## Sample Code
 
