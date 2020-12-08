@@ -14,13 +14,17 @@ type args struct {
 }
 
 func parseArgs() args {
+	return _parseArgs(os.Args[1:])
+}
+
+func _parseArgs(theseArgs []string) args {
 	fs := flag.NewFlagSet("main", flag.ExitOnError)
 
 	inputPath := fs.String("in", "-", "File to read. Use - for STDIN.")
 	outputPath := fs.String("out", "-", "File to write. Use - for STDOUT.")
 
 	// parse the args
-	err := fs.Parse(os.Args[1:])
+	err := fs.Parse(theseArgs)
 	if errors.Is(err, flag.ErrHelp) {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s\n", os.Args[0])
 		fs.PrintDefaults()
@@ -32,7 +36,7 @@ func parseArgs() args {
 
 	// ensure no unexpected args were provided
 	if fs.NArg() > 0 {
-		fmt.Fprintf(os.Stderr, "unexpected arg: %s", fs.Arg(0))
+		fmt.Fprintf(os.Stderr, "unexpected arg: %s\n", fs.Arg(0))
 		os.Exit(1)
 	}
 
@@ -51,16 +55,16 @@ func parseArgs() args {
 
 func assertExtantFile(paramName, path string) {
 	if path == "" {
-		fmt.Fprintf(os.Stderr, "`%s` cannot be empty", paramName)
+		fmt.Fprintf(os.Stderr, "`%s` cannot be empty\n", paramName)
 		os.Exit(1)
 	}
 
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "`%s`: %s", paramName, err.Error())
+		fmt.Fprintf(os.Stderr, "`%s`: %s\n", paramName, err.Error())
 		os.Exit(1)
 	} else if fileInfo.IsDir() {
-		fmt.Fprintf(os.Stderr, "`%s`: %s", paramName, err.Error())
+		fmt.Fprintf(os.Stderr, "`%s`: %s\n", paramName, err.Error())
 		os.Exit(1)
 	}
 }
