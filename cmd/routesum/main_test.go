@@ -3,36 +3,37 @@ package main
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSimpleUsage(t *testing.T) {
-	in, err := ioutil.TempFile(os.TempDir(), "")
-	require.NoError(t, err, "create temp input file")
+// Improve testing methodology with https://stackoverflow.com/a/55324723/211029
+
+func TestFileIO(t *testing.T) {
+	// create a temporary directory
+	tempdir, err := ioutil.TempDir("", "routesum-test-")
+	require.NoError(t, err, "create temp directory")
 	defer func() {
-		err := os.Remove(in.Name())
-		require.NoError(t, err, "remove temp input file")
+		err := os.RemoveAll(tempdir)
+		require.NoError(t, err, "remove temp directory")
 	}()
-	_, err = in.WriteString("192.0.2.0\n192.0.2.1\n")
+
+	// create a test input file in the tempdir
+	inPath := filepath.Clean(filepath.Join(tempdir, "in.txt"))
+	err = ioutil.WriteFile(inPath, []byte("192.0.2.0\n192.0.2.1\n"), 0644)
 	require.NoError(t, err, "write to temp input file")
-	err = in.Close()
-	require.NoError(t, err, "close temp input file")
 
-	out, err := ioutil.TempFile(os.TempDir(), "")
-	require.NoError(t, err, "create temp output file")
-	defer func() {
-		err := os.Remove(out.Name())
-		require.NoError(t, err, "remove temp output file")
-	}()
-
-	err = summarize(in.Name(), out.Name())
+	// run the program
+	outPath := filepath.Clean(filepath.Join(tempdir, "out.txt"))
+	err = summarize(inPath, outPath)
 	require.NoError(t, err, "summarize does not throw an error")
 
-	stdout := make([]byte, 50)
-	n, err := out.Read(stdout)
-	require.NoError(t, err, "read program stdout")
-	assert.Equal(t, "192.0.2.0/31\n", string(stdout[:n]), "read expected bytes")
+	// read the output
+	written, err := ioutil.ReadFile(outPath)
+	require.NoError(t, err, "read program output")
+
+	assert.Equal(t, "192.0.2.0/31\n", string(written), "read expected bytes")
 }
