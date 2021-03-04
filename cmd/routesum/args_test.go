@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -12,9 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultAndValidArgs(t *testing.T) {
+func TestArgs(t *testing.T) {
 	// default values are respected
-	args := _parseArgs([]string{})
+	args, err := _parseArgs([]string{})
+	require.NoError(t, err, "parsing args")
 	assert.Equal(t, "-", args.inputPath, "default inputPath")
 	assert.Equal(t, "-", args.outputPath, "default outputPath")
 
@@ -29,26 +28,17 @@ func TestDefaultAndValidArgs(t *testing.T) {
 	err = ioutil.WriteFile(inPath, []byte("192.0.2.0\n192.0.2.1\n"), 0644)
 	require.NoError(t, err, "write to temp input file")
 
-	args = _parseArgs([]string{
+	args, err = _parseArgs([]string{
 		"-in", inPath,
 		"-out", "out.txt",
 	})
+	require.NoError(t, err, "parsing args")
 	assert.Equal(t, inPath, args.inputPath, "specified inputPath")
 	assert.Equal(t, "out.txt", args.outputPath, "specified outputPath")
-}
 
-func TestNonExtantInputFile(t *testing.T) {
-	if os.Getenv("NON_EXTANT_INPUT_FILE") == "1" {
-		_parseArgs([]string{
-			"-in", "./does-not-exist.txt",
-		})
-	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestNonExtantInputFile") // nolint: gosec
-	cmd.Env = append(os.Environ(), "NON_EXTANT_INPUT_FILE=1")
-	err := cmd.Run()
-	var e *exec.ExitError
-	if assert.True(t, errors.As(err, &e)) {
-		assert.False(t, e.Success())
+	// non-extant input file throws error
+	_, err = _parseArgs([]string{"-in", "./does-not-exist.txt"})
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "check input file", "expected error on non-extant input file")
 	}
 }

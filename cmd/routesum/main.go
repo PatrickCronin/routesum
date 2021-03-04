@@ -10,7 +10,11 @@ import (
 )
 
 func main() {
-	a := parseArgs()
+	a, err := parseArgs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "parse args: %s\n", err.Error())
+		os.Exit(1)
+	}
 
 	if err := setupIOAndSummarize(a.inputPath, a.outputPath); err != nil {
 		fmt.Fprintf(os.Stderr, "set up IO and summarize: %s\n", err.Error())
