@@ -10,9 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Improve testing methodology with https://stackoverflow.com/a/55324723/211029
-
-func TestFileIO(t *testing.T) {
+func TestSummarize(t *testing.T) {
 	// create a temporary directory
 	tempdir, err := ioutil.TempDir("", "routesum-test-")
 	require.NoError(t, err, "create temp directory")
@@ -28,7 +26,7 @@ func TestFileIO(t *testing.T) {
 
 	// run the program
 	outPath := filepath.Clean(filepath.Join(tempdir, "out.txt"))
-	err = summarize(inPath, outPath)
+	err = setupIOAndSummarize(inPath, outPath)
 	require.NoError(t, err, "summarize does not throw an error")
 
 	// read the output
