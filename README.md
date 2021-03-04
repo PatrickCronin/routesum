@@ -4,6 +4,7 @@
 
 ![Build](https://github.com/PatrickCronin/routesum/workflows/Build/badge.svg)
 ![golangci-lint](https://github.com/PatrickCronin/routesum/workflows/golangci-lint/badge.svg)
+[![go report](https://goreportcard.com/badge/github.com/PatrickCronin/routesum)](https://goreportcard.com/badge/github.com/PatrickCronin/routesum)
 [![Coverage
 Status](https://coveralls.io/repos/github/PatrickCronin/routesum/badge.svg)](https://coveralls.io/github/PatrickCronin/routesum)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/PatrickCronin/routesum/pkg/routesum)](https://pkg.go.dev/github.com/PatrickCronin/routesum/pkg/routesum)

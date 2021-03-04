@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "8 10 * * SUN"
+    - cron: "5 4 * * SUN"
 
 jobs:
   golangci:

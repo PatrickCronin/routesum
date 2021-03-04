@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSafeRepIPFromString(t *testing.T) {
@@ -41,10 +42,11 @@ func TestSafeRepIPFromString(t *testing.T) {
 		},
 	}
 	for _, test := range validIPTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromString(test.input) // nolint: scopelint
+			srIP, err := newSafeRepIPFromString(test.input)
 			assert.NoError(t, err, "construct safeRepIP from string")
-			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.input, srIP.String(), "safeRepIP stringifies as expected")
 		})
 	}
 }
@@ -82,15 +84,16 @@ func TestSafeRepIPFromNetIP(t *testing.T) {
 		},
 	}
 	for _, test := range validIPTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepIPFromNetIP(test.input) // nolint: scopelint
+			srIP, err := newSafeRepIPFromNetIP(test.input)
 			assert.NoError(t, err, "construct safeRepIP from net.IP")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srIP.String(), "safeRepIP stringifies as expected")
 		})
 	}
 }
 
-func TestSafeRepNetFromString(t *testing.T) {
+func TestSafeRepNetFromString(t *testing.T) { // nolint: funlen
 	invalidNetStrs := []string{
 		"192.0.2/29",
 		"192.0.2.0.0/29",
@@ -145,10 +148,11 @@ func TestSafeRepNetFromString(t *testing.T) {
 		},
 	}
 	for _, test := range validNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srNet, err := newSafeRepNetFromString(test.input) // nolint: scopelint
+			srNet, err := newSafeRepNetFromString(test.input)
 			assert.NoError(t, err, "construct safeRepNet from string")
-			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srNet.String(), "safeRepNet stringifies as expected")
 		})
 	}
 }
@@ -202,10 +206,11 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 		},
 	}
 	for _, test := range invalidIPNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			_, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
+			_, err := newSafeRepNetFromNetIPNet(test.input)
 			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), test.expected) // nolint: scopelint
+				assert.Contains(t, err.Error(), test.expected)
 			}
 		})
 	}
@@ -247,10 +252,52 @@ func TestSafeRepNetFromNetIPNet(t *testing.T) { // nolint: funlen
 		},
 	}
 	for _, test := range validIPNetTests {
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
-			srIP, err := newSafeRepNetFromNetIPNet(test.input) // nolint: scopelint
+			srIP, err := newSafeRepNetFromNetIPNet(test.input)
 			assert.NoError(t, err, "construct safeRepNet from net.IPNet")
-			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected") // nolint: scopelint
+			assert.Equal(t, test.expected, srIP.String(), "safeRepNet stringifies as expected")
+		})
+	}
+}
+
+func TestResizeMask(t *testing.T) {
+	// In the event that net.ParseCIDR ever returns a Mask whose length don't
+	// match it's IP length, we resize it. This does seem a bit paranoid, but
+	// but if it does happen, we'll be ready.
+	tests := []struct {
+		name             string
+		input            string
+		resizeMaskToBits int
+		expected         net.IPMask
+	}{
+		{
+			name:             "IPv4 to IPv6",
+			input:            "192.0.2.0/28",
+			resizeMaskToBits: net.IPv6len * 8,
+			expected: net.IPMask([]byte{
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0,
+			}),
+		},
+		{
+			name:             "IPv6 to IPv4",
+			input:            "2001:db8::1/124",
+			resizeMaskToBits: net.IPv4len * 8,
+			expected:         net.IPMask([]byte{255, 255, 255, 240}),
+		},
+	}
+
+	for _, test := range tests {
+		// nolint: scopelint
+		t.Run(test.name, func(t *testing.T) {
+			_, parsedNetwork, err := net.ParseCIDR(test.input)
+			require.NoError(t, err, "parse input network")
+			assert.Equal(
+				t,
+				test.expected,
+				resizeMask(parsedNetwork.Mask, test.resizeMaskToBits),
+			)
 		})
 	}
 }
