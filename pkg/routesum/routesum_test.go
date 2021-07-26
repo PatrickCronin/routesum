@@ -1,9 +1,6 @@
 package routesum
 
 import (
-	"errors"
-	"fmt"
-	"net"
 	"regexp"
 	"testing"
 
@@ -21,16 +18,16 @@ func TestStrings(t *testing.T) { // nolint: funlen
 		"2001:db8:",
 		"not an IP",
 	}
-	invalidIPErr := regexp.MustCompile(`validate IP:.*was not understood\.`)
+	invalidIPErr := regexp.MustCompile(`ParseIP`)
 	for _, invalidIP := range invalidIPs {
-		summarized, err := Strings([]string{invalidIP})
-		assert.Nil(t, summarized)
-		if assert.Error(t, err) {
-			var iiErr *InvalidInputErr
-			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
-			assert.Equal(t, invalidIP, iiErr.InvalidValue, "expected InvalidValue can be extracted")
-			assert.Regexp(t, invalidIPErr, err.Error())
-		}
+		t.Run(invalidIP, func(t *testing.T) {
+			rs := NewRouteSum()
+			err := rs.InsertFromString(invalidIP)
+			if assert.Error(t, err) {
+				assert.Regexp(t, invalidIPErr, err.Error())
+			}
+			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+		})
 	}
 
 	// Invalid networks throw the expected error
@@ -43,16 +40,16 @@ func TestStrings(t *testing.T) { // nolint: funlen
 		"2001:db8::/129",
 		"not/a/network",
 	}
-	invalidNetErr := regexp.MustCompile(`validate network:.*was not understood\.`)
+	invalidNetErr := regexp.MustCompile(`ParseIPPrefix`)
 	for _, invalidNet := range invalidNets {
-		summarized, err := Strings([]string{invalidNet})
-		assert.Nil(t, summarized)
-		if assert.Error(t, err) {
-			var iiErr *InvalidInputErr
-			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
-			assert.Equal(t, invalidNet, iiErr.InvalidValue, "expected InvalidValue can be extracted")
-			assert.Regexp(t, invalidNetErr, err.Error())
-		}
+		t.Run(invalidNet, func(t *testing.T) {
+			rs := NewRouteSum()
+			err := rs.InsertFromString(invalidNet)
+			if assert.Error(t, err) {
+				assert.Regexp(t, invalidNetErr, err.Error())
+			}
+			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+		})
 	}
 
 	tests := []struct {
@@ -61,7 +58,7 @@ func TestStrings(t *testing.T) { // nolint: funlen
 		expected []string
 	}{
 		{
-			name: "IPs and networks are returned in the form provided",
+			name: "IPv4, IPv6-embedded IPv4 and IPv6 formats are preserved",
 			input: []string{
 				"192.0.2.0",
 				"::ffff:192.0.2.0",
@@ -72,10 +69,10 @@ func TestStrings(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
-				"2001:db8::",
 				"198.51.100.0/24",
-				"::ffff:198.51.100.0/120",
+				"::ffff:c000:200",
+				"::ffff:c633:6400/120",
+				"2001:db8::",
 				"2001:db8:1::/48",
 			},
 		},
@@ -91,7 +88,7 @@ func TestStrings(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
+				"::ffff:c000:200",
 				"2001:db8::",
 			},
 		},
@@ -107,216 +104,14 @@ func TestStrings(t *testing.T) { // nolint: funlen
 		},
 	}
 	for _, test := range tests {
-		summarized, err := Strings(test.input)
-		assert.NoError(t, err, test.name)
-		assert.Equal(t, test.expected, summarized, test.name)
-	}
-}
-
-func TestNetworksAndIPs(t *testing.T) { // nolint: funlen
-	// Summarization logic is tested in TestSummarize.
-
-	// Invalid IPs throw the expected error
-	invalidIPs := []net.IP{
-		[]byte{192, 0, 2},
-		[]byte{192, 0, 2, 0, 0},
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100},
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0, 0},
-		[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	}
-	invalidIPErr := regexp.MustCompile(`validate IP:.*was not understood\.`)
-	for _, invalidIP := range invalidIPs {
-		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{}, []net.IP{invalidIP})
-		assert.Nil(t, sumNets)
-		assert.Nil(t, sumIPs)
-		if assert.Error(t, err) {
-			var iiErr *InvalidInputErr
-			assert.True(t, errors.As(err, &iiErr), "resulting error can be converted to an InvalidInputErr")
-			assert.Equal(t, fmt.Sprintf("%#v", invalidIP), iiErr.InvalidValue, "expected InvalidValue can be extracted")
-			assert.Regexp(t, invalidIPErr, err.Error())
-		}
-	}
-
-	// Invalid networks throw the expected error
-	invalidNetIPs := []net.IPNet{
-		{
-			IP:   []byte{192, 0, 2},
-			Mask: []byte{255, 255, 0},
-		},
-		{
-			IP:   []byte{192, 0, 2, 0, 0},
-			Mask: []byte{255, 255, 255, 255, 0},
-		},
-		{
-			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100},
-			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
-		},
-		{
-			IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0, 0},
-			Mask: []byte{
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
-			},
-		},
-		{
-			IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0},
-		},
-		{
-			IP: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Mask: []byte{
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
-			},
-		},
-	}
-	invalidNetIPErr := regexp.MustCompile(`validate network:.*was not understood\.`)
-	for _, invalidNetIP := range invalidNetIPs {
-		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{invalidNetIP}, []net.IP{})
-		assert.Nil(t, sumNets)
-		assert.Nil(t, sumIPs)
-		if assert.Error(t, err) {
-			assert.Regexp(t, invalidNetIPErr, err.Error())
-		}
-	}
-
-	invalidNetMasks := []net.IPNet{
-		{
-			IP: []byte{192, 0, 2, 0},
-			Mask: []byte{
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			},
-		},
-		{
-			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
-			Mask: []byte{255, 255, 255, 0},
-		},
-		{
-			IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Mask: []byte{255, 255, 255, 0},
-		},
-	}
-	invalidNetMaskErr := regexp.MustCompile(`validate network:.*was not understood\.`)
-	for _, invalidNetIP := range invalidNetMasks {
-		sumNets, sumIPs, err := NetworksAndIPs([]net.IPNet{invalidNetIP}, []net.IP{})
-		assert.Nil(t, sumNets)
-		assert.Nil(t, sumIPs)
-		if assert.Error(t, err) {
-			assert.Regexp(t, invalidNetMaskErr, err.Error())
-		}
-	}
-
-	tests := []struct {
-		name             string
-		inputNetworks    []net.IPNet
-		inputIPs         []net.IP
-		expectedNetworks []net.IPNet
-		expectedIPs      []net.IP
-	}{
-		{
-			name: "IPs and networks are returned in the form provided",
-			inputNetworks: []net.IPNet{
-				{
-					IP:   []byte{198, 51, 100, 0},
-					Mask: []byte{255, 255, 255, 0},
-				},
-				{
-					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
-					Mask: []byte{
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
-					},
-				},
-				{
-					IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				},
-			},
-			inputIPs: []net.IP{
-				[]byte{192, 0, 2, 0},
-				[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-				[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-			expectedNetworks: []net.IPNet{
-				{
-					IP:   []byte{198, 51, 100, 0},
-					Mask: []byte{255, 255, 255, 0},
-				},
-				{
-					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 198, 51, 100, 0},
-					Mask: []byte{
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0,
-					},
-				},
-				{
-					IP:   []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Mask: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				},
-			},
-			expectedIPs: []net.IP{
-				[]byte{192, 0, 2, 0},
-				[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-				[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-		{
-			name: "documented caveat: IPs and zero-host networks are thought to be the same",
-			inputNetworks: []net.IPNet{
-				{
-					IP:   []byte{192, 0, 2, 0},
-					Mask: []byte{255, 255, 255, 255},
-				},
-				{
-					IP: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-					Mask: []byte{
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-					},
-				},
-				{
-					IP: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Mask: []byte{
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-						0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-					},
-				},
-			},
-			inputIPs: []net.IP{
-				[]byte{192, 0, 2, 0},
-				[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-				[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-			expectedNetworks: []net.IPNet{},
-			expectedIPs: []net.IP{
-				[]byte{192, 0, 2, 0},
-				[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 0},
-				[]byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-		{
-			name:          "a simple summarization works as expected",
-			inputNetworks: []net.IPNet{},
-			inputIPs: []net.IP{
-				[]byte{192, 0, 2, 44},
-				[]byte{192, 0, 2, 45},
-			},
-			expectedNetworks: []net.IPNet{
-				{
-					IP:   []byte{192, 0, 2, 44},
-					Mask: []byte{255, 255, 255, 254},
-				},
-			},
-			expectedIPs: []net.IP{},
-		},
-	}
-	for _, test := range tests {
-		sumNets, sumIPs, err := NetworksAndIPs(test.inputNetworks, test.inputIPs)
-		assert.NoError(t, err, test.name)
-		assert.Equal(t, test.expectedNetworks, sumNets, test.name)
-		assert.Equal(t, test.expectedIPs, sumIPs, test.name)
+		t.Run(test.name, func(t *testing.T) {
+			rs := NewRouteSum()
+			for _, str := range test.input {
+				err := rs.InsertFromString(str)
+				require.NoError(t, err)
+			}
+			assert.Equal(t, test.expected, rs.SummaryStrings(), "summarized as expected")
+		})
 	}
 }
 
@@ -344,10 +139,10 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
-				"2001:db8::",
 				"198.51.100.0/31",
-				"::ffff:198.51.100.0/127",
+				"::ffff:c000:200",
+				"::ffff:c633:6400/127",
+				"2001:db8::",
 				"2001:db8::1:0/127",
 			},
 		},
@@ -363,7 +158,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/26",
-				"::ffff:192.0.2.0/120",
+				"::ffff:c000:200/120",
 				"2001:db8::/120",
 			},
 		},
@@ -379,7 +174,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:192.0.2.0/127",
+				"::ffff:c000:200/127",
 				"2001:db8::/127",
 			},
 		},
@@ -401,7 +196,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/30",
-				"::ffff:192.0.2.0/126",
+				"::ffff:c000:200/126",
 				"2001:db8::/126",
 			},
 		},
@@ -526,7 +321,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/24",
-				"::ffff:192.0.2.0/120",
+				"::ffff:c000:200/120",
 				"2001:db8::/32",
 			},
 		},
@@ -560,23 +355,23 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.1",
-				"192.0.2.4",
-				"::ffff:192.0.2.1",
-				"::ffff:192.0.2.4",
-				"2001:db8::1",
-				"2001:db8::4",
 				"192.0.2.2/31",
+				"192.0.2.4",
 				"198.51.100.2/31",
-				"198.51.100.8/31",
 				"198.51.100.4/30",
-				"::ffff:192.0.2.2/127",
-				"::ffff:198.51.100.2/127",
-				"::ffff:198.51.100.8/127",
+				"198.51.100.8/31",
+				"::ffff:c000:201",
+				"::ffff:c000:202/127",
+				"::ffff:c000:204",
+				"::ffff:c633:6402/127",
+				"::ffff:c633:6404/126",
+				"::ffff:c633:6408/127",
+				"2001:db8::1",
 				"2001:db8::2/127",
+				"2001:db8::4",
 				"2001:db8::1:2/127",
-				"2001:db8::1:8/127",
-				"::ffff:198.51.100.4/126",
 				"2001:db8::1:4/126",
+				"2001:db8::1:8/127",
 			},
 		},
 		{
@@ -594,7 +389,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:192.0.2.0/127",
+				"::ffff:c000:200/127",
 				"2001:db8::/127",
 			},
 		},
@@ -604,7 +399,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 				"::ffff:192.0.2.0",
 			},
 			expected: []string{
-				"::ffff:192.0.2.0",
+				"::ffff:c000:200",
 			},
 		},
 		{
@@ -615,7 +410,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
+				"::ffff:c000:200",
 			},
 		},
 		{
@@ -627,7 +422,7 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
+				"::ffff:c000:200",
 				"2001:db8::",
 			},
 		},
@@ -643,215 +438,20 @@ func TestSummarize(t *testing.T) { // nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:192.0.2.0",
+				"::ffff:c000:200",
 				"2001:db8::",
 			},
 		},
 	}
 
 	for _, test := range tests {
-		strs, err := Strings(test.input)
-		require.NoError(t, err, test.name)
-		assert.Equal(t, test.expected, strs, test.name)
-	}
-}
-
-func TestRemoveContainedNetworks(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []string
-		expected []string
-	}{
-		{
-			name: "networks contained by other networks are removed",
-			input: []string{
-				"192.0.2.27/32",
-				"192.0.2.16/28",
-				"192.0.2.8/27",
-				"::ffff:192.0.2.27/128",
-				"::ffff:192.0.2.16/124",
-				"::ffff:192.0.2.8/123",
-				"2001:db8::1b/128",
-				"2001:db8::10/124",
-				"2001:db8::8/123",
-			},
-			expected: []string{
-				"2001:db8::8/123",
-				"::ffff:192.0.2.8/123",
-				"192.0.2.8/27",
-			},
-		},
-		{
-			name: "list with no contained networks is not modified",
-			input: []string{
-				"192.0.2.16/32",
-				"198.51.100.0/29",
-				"203.0.113.0/30",
-				"2001:db8::/120",
-			},
-			expected: []string{
-				"2001:db8::/120",
-				"198.51.100.0/29",
-				"203.0.113.0/30",
-				"192.0.2.16/32",
-			},
-		},
-	}
-
-	for _, test := range tests {
-		var inputSRNets []safeRepNet
-		for _, in := range test.input {
-			srNet, err := newSafeRepNetFromString(in)
-			require.NoError(t, err)
-			inputSRNets = append(inputSRNets, *srNet)
-		}
-
-		var expectedSRNets []safeRepNet
-		for _, exp := range test.expected {
-			srNet, err := newSafeRepNetFromString(exp)
-			require.NoError(t, err)
-			expectedSRNets = append(expectedSRNets, *srNet)
-		}
-
-		uncontainedSRNets := removeContainedNetworks(inputSRNets)
-		assert.Equal(t, expectedSRNets, uncontainedSRNets, test.name)
-	}
-}
-
-func TestTrySumNets(t *testing.T) { // nolint: funlen
-	tests := []struct {
-		name     string
-		nets     [2]string
-		expected string
-	}{
-		{
-			name: "IPv4 and IPv4-embedded IPv6 networks don't summarize",
-			nets: [2]string{
-				"192.0.2.0/32",
-				"::ffff:192.0.2.1/128",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv4-embedded IPv6 and IPv6 networks do summarize",
-			nets: [2]string{
-				"::ffff:192.0.2.0/128",
-				"::ffff:c000:201/128", // ::ffff:192.0.2.1/128
-			},
-			expected: "::ffff:c000:200/127",
-		},
-		{
-			name: "IPv4: duplicate networks don't summarize",
-			nets: [2]string{
-				"192.0.2.0/32",
-				"192.0.2.0/32",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv4-embedded IPv6: duplicate networks don't summarize",
-			nets: [2]string{
-				"::ffff:192.0.2.0/128",
-				"::ffff:192.0.2.0/128",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv6: duplicate networks don't summarize",
-			nets: [2]string{
-				"2001:db8::/128",
-				"2001:db8::/128",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv4: consecutive but misaligned networks don't summarize",
-			nets: [2]string{
-				"192.0.2.1/32",
-				"192.0.2.2/32",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv4-embedded IPv6: consecutive but misaligned networks don't summarize",
-			nets: [2]string{
-				"::ffff:192.0.2.1/128",
-				"::ffff:192.0.2.2/128",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv6: consecutive but misaligned networks don't summarize",
-			nets: [2]string{
-				"2001:db8::1/128",
-				"2001:db8::2/128",
-			},
-			expected: "",
-		},
-		{
-			name: "IPv4: consecutive and aligned networks do summarize",
-			nets: [2]string{
-				"192.0.2.0/32",
-				"192.0.2.1/32",
-			},
-			expected: "192.0.2.0/31",
-		},
-		{
-			name: "IPv4-embedded IPv6: consecutive and aligned networks do summarize",
-			nets: [2]string{
-				"::ffff:192.0.2.0/128",
-				"::ffff:192.0.2.1/128",
-			},
-			expected: "::ffff:192.0.2.0/127",
-		},
-		{
-			name: "IPv6: consecutive and aligned networks do summarize",
-			nets: [2]string{
-				"2001:db8::0/128",
-				"2001:db8::1/128",
-			},
-			expected: "2001:db8::0/127",
-		},
-		{
-			name: "IPv4: order of networks doesn't interfere with summarization",
-			nets: [2]string{
-				"192.0.2.1/32",
-				"192.0.2.0/32",
-			},
-			expected: "192.0.2.0/31",
-		},
-		{
-			name: "IPv4-embedded IPv6: order of networks doesn't interfere with summarization",
-			nets: [2]string{
-				"::ffff:192.0.2.1/128",
-				"::ffff:192.0.2.0/128",
-			},
-			expected: "::ffff:192.0.2.0/127",
-		},
-		{
-			name: "IPv6: order of networks doesn't interfere with summarization",
-			nets: [2]string{
-				"2001:db8::1/128",
-				"2001:db8::0/128",
-			},
-			expected: "2001:db8::0/127",
-		},
-	}
-
-	for _, test := range tests {
-		a, err := newSafeRepNetFromString(test.nets[0])
-		require.NoError(t, err)
-		b, err := newSafeRepNetFromString(test.nets[1])
-		require.NoError(t, err)
-
-		var expected *safeRepNet
-		if test.expected != "" {
-			exp, err := newSafeRepNetFromString(test.expected)
-			require.NoError(t, err)
-			expected = exp
-		}
-
-		sumNet := trySumNets(*a, *b)
-		assert.Equal(t, expected, sumNet, test.name)
+		t.Run(test.name, func(t *testing.T) {
+			rs := NewRouteSum()
+			for _, str := range test.input {
+				err := rs.InsertFromString(str)
+				require.NoError(t, err)
+			}
+			assert.Equal(t, test.expected, rs.SummaryStrings(), "got expected summary")
+		})
 	}
 }

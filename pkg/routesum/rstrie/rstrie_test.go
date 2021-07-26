@@ -47,12 +47,12 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 	tests := []struct {
 		name     string
 		routes   []bitslice.BitSlice
-		expected RSTrie
+		expected *RSTrie
 	}{
 		{
 			name:   "add one child",
 			routes: []bitslice.BitSlice{{0}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -62,7 +62,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "add two children, completing the root node's subtrie",
 			routes: []bitslice.BitSlice{{0}, {1}},
-			expected: RSTrie{root: &node{
+			expected: &RSTrie{root: &node{
 				bits:     bitslice.BitSlice{},
 				children: nil,
 			}},
@@ -70,7 +70,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "split root, root is empty",
 			routes: []bitslice.BitSlice{{0, 0}, {1, 1}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits: bitslice.BitSlice{},
 					children: &[2]*node{
@@ -83,7 +83,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "split root, root is not empty",
 			routes: []bitslice.BitSlice{{0, 0}, {0, 1, 0}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits: bitslice.BitSlice{0},
 					children: &[2]*node{
@@ -96,7 +96,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "split root, traverse, and split internal",
 			routes: []bitslice.BitSlice{{0}, {1, 0, 0}, {1, 1, 0}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits: bitslice.BitSlice{},
 					children: &[2]*node{
@@ -115,7 +115,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "covered routes are ignored",
 			routes: []bitslice.BitSlice{{0}, {0, 0}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -125,7 +125,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 		{
 			name:   "route covering node replaces it",
 			routes: []bitslice.BitSlice{{0, 0}, {0}},
-			expected: RSTrie{
+			expected: &RSTrie{
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -140,7 +140,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 				{0, 0, 1},
 				{0, 0, 0},
 			},
-			expected: RSTrie{root: &node{
+			expected: &RSTrie{root: &node{
 				bits:     bitslice.BitSlice{},
 				children: nil,
 			}},
