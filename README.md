@@ -236,9 +236,6 @@ Will print:
   2600:: => 2600::/128) for processing, and then converts all 0-host networks
   back to IPs when it returns its results.
 
-* **Performance**: `routesum`'s implementation has plenty of room for
-  performance improvements, and this will be clear for large inputs.
-
 * **Sorting**: `routesum`'s output is not currently guaranteed to be sorted in
   any particular order.
 
