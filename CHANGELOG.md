@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.2.0 (...)
+
+* Create a much more performant implementation
+
 ## 0.1.1 (2021-09-14)
 
 * Handle empty lines in the CLI tool
