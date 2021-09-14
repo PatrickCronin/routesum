@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -62,9 +63,13 @@ func setupIOAndSummarize(inputPath, outputPath string) error {
 
 func summarize(in io.Reader, out io.StringWriter) error {
 	scanner := bufio.NewScanner(in)
-	lines := []string{}
+	var lines []string
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		line := bytes.TrimSpace(scanner.Bytes())
+		if len(line) == 0 {
+			continue
+		}
+		lines = append(lines, string(line))
 	}
 
 	summarized, err := routesum.Strings(lines)
