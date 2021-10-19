@@ -125,13 +125,13 @@ CentOS, `rpm -i /path/to/the.rpm` as root. `routesum` will be installed in to
 ### Building From Source
 
 `routesum` is written in Golang, so you'll need a reasonably recent version of
-Go. This project aims to maintain support for the two most recent major versions
-of the Go compiler.
+Go (1.16+). This project aims to maintain support for the two most recent major
+versions of the Go compiler.
 
 With this in place, simply run:
 
 ```bash
-$ go get -u github.com/PatrickCronin/routesum/cmd/routesum
+$ go install github.com/PatrickCronin/routesum/cmd/routesum@latest
 ```
 
 which will install `routesum` into the directory named by the `GOBIN`
@@ -140,14 +140,16 @@ environment variable, which defaults to `$GOPATH/bin` or `$HOME/go/bin` if the
 
 # Golang Library
 
-The `routesum` library provides two methods for users:
+The `routesum` library provides a type that maintains an ongoing summary of IPs
+and CIDR-formatted networks as they are added:
 
-* `routesum.Strings()` accepts a slice of strings containing (possibly a mixture
-  of) IP addresses and CIDR-formatted networks.
-* `routesum.NetworksAndIPs()` accepts a slice of `net.IPNet` networks and a
-  slice of `net.IP` IP addresses. Users of this methods should be sure to see
-  the below-mentioned caveat on IPv4-embedded IPv6 if differentiating between
-  IPv4-embedded IPv6 addresses from their IPv4 counterparts is important.
+* `rs := routesum.NewRouteSum()`
+
+The type offers two methods:
+
+* `rs.InsertFromString()` adds an IP or a CIDR-formatted network to its internal
+  summary.
+* `rs.SummaryStrings()` returns the summarized routes as a slice of strings.
 
 Library documentation is viewable in the code, or at
 [pkg.go.dev](https://pkg.go.dev/github.com/PatrickCronin/routesum/pkg/routesum).
@@ -157,6 +159,8 @@ Library documentation is viewable in the code, or at
 ```go
 import "github.com/PatrickCronin/routesum/pkg/routesum"
 
+...
+
 ipsAndNetworks := []string{
     "198.51.100.1",
     "198.51.100.4",
@@ -165,13 +169,16 @@ ipsAndNetworks := []string{
     "198.51.100.6/31",
 }
 
-summarized, err := routesum.Strings(ipsAndNetworks)
-if err != nil {
-    ...
+rs := routesum.NewRouteSum()
+for _, s := range ipsAndNetworks {
+    if err := rs.InsertFromString(s); err != nil {
+        ...
+    }
 }
 
-for _, s := range summarized {
-    fmt.Println(s.String())
+summary := rs.SummaryStrings()
+for _, s := range summary {
+    fmt.Println(s)
 }
 ```
 
@@ -187,49 +194,7 @@ Will print:
 
 * **IPv4-embedded IPv6 addresses**: `routesum` treats IPv4-embedded IPv6
   addresses as distinct from their IPv4 counterparts. As an example, `routesum`
-  will not think of `192.0.2.0` and `::ffff:192.0.2.0` as duplicates. If you
-  want the two to be treated as one and the same, you'll need to ensure the data
-  you provide to `routesum` in this range is consistently in one form or the
-  other:
-
-  * The `routesum` command-line program will treat IPv4-embedded IPv6 addresses
-    as distinct from their IPv4 counterparts. If you don't want this, you should
-    prepare the input to have all IPv4-embedded IPv6 addresses expressed either
-    as IPv4 addresses or IPv6 addresses, but not a mixture of both. The data
-    returned will be in the format you provided it.
-
-  * The `routesum.Strings()` library method will treat IPv4-embedded IPv6
-    addresses as distinct from their IPv4 counterparts. If you don't want this,
-    you should prepare the input to have all IPv4-embedded IPv6 addresses
-    expressed either as IPv4 addresses or IPv6 addresses, but not a mixture of
-    both. The data returned will be in the format you provided it.
-
-  * The `routesum.NetworksAndIPs()` library method accepts a `[]net.IPNet` and a
-    `[]net.IP` as input, and takes hints from the internal representations of
-    each item in each slice to distinguish IPv4-embedded IPv6 addresses from
-    their IPv4 counterparts. We now need a small digression:
-
-    The `net` package prefers not to distinguish between these two sets of IPs,
-    but is capable of being cajoled into allowing us to do so. Under the hood,
-    `net.IP` and `net.Mask` are `[]byte`. The package supports byte slices of
-    length 4 and 16. Data with a 4-byte representation must be in the IPv4
-    family, but those of 16-byte representations could have originated from
-    either the IPv4 or v6 families. For example, `net.ParseIP("192.0.2.13")`
-    will (currently) create a 16-byte slice to store the result, and thus if
-    we're only looking at the resulting `net.IP` object, we can't tell if it was
-    an IPv4 address (192.0.2.13) or its IPv4-embedded IPv6 counterpart
-    (::ffff:192.0.2.13) originally. However, the `net` package offers the
-    `.To4()` and `.To16()` methods to create new data using the specified
-    underlying representation. To ensure that a `net.IP` is represented with 4
-    bytes, take the result of calling `.To4()` on it, and similarly, to ensure
-    that an IP is represented with 16 bytes, take the result of calling
-    `.To16()` on it.
-
-    If you don't want `routesum.NetworksAndIPs` to distinguish between
-    IPv4-embedded IPv6 addresses and their IPv4 counterparts, you should prepare
-    the input to express all IPv4 data in 4-byte representation, and all IPv6
-    data in 16-byte representation, but not a mixture of both. This includes the
-    `.IP` and `.Mask` fields of each `net.IPNet`, and each `net.IP`.
+  will not think of `192.0.2.0` and `::ffff:192.0.2.0` as duplicates.
 
 * **Zero-Host Networks**: To simplify its implementation, `routesum` internally
   converts IP addresses to 0-host networks (e.g. 192.0.2.1 => 192.0.2.1/32, and
@@ -246,7 +211,7 @@ tracker](https://github.com/PatrickCronin/routesum/issues).
 
 # Copyright and License
 
-This software is Copyright (c) 2020 by Patrick Cronin.
+This software is Copyright (c) 2020-2021 by Patrick Cronin.
 
 This is free software, licensed under the terms of the [MIT
 License](https://github.com/PatrickCronin/routesum/LICENSE.md).
