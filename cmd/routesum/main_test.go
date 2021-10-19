@@ -21,7 +21,7 @@ func TestSummarize(t *testing.T) {
 
 	// create a test input file in the tempdir
 	inPath := filepath.Clean(filepath.Join(tempdir, "in.txt"))
-	err = ioutil.WriteFile(inPath, []byte("192.0.2.0\n192.0.2.1\n"), 0644)
+	err = ioutil.WriteFile(inPath, []byte("192.0.2.0\n192.0.2.1\n"), 0o644)
 	require.NoError(t, err, "write to temp input file")
 
 	// run the program

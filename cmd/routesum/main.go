@@ -62,22 +62,20 @@ func setupIOAndSummarize(inputPath, outputPath string) error {
 }
 
 func summarize(in io.Reader, out io.StringWriter) error {
+	rs := routesum.NewRouteSum()
 	scanner := bufio.NewScanner(in)
-	var lines []string
 	for scanner.Scan() {
 		line := bytes.TrimSpace(scanner.Bytes())
 		if len(line) == 0 {
 			continue
 		}
-		lines = append(lines, string(line))
+
+		if err := rs.InsertFromString(string(line)); err != nil {
+			return fmt.Errorf("add string: %w", err)
+		}
 	}
 
-	summarized, err := routesum.Strings(lines)
-	if err != nil {
-		return fmt.Errorf("summarize input: %w", err)
-	}
-
-	for _, s := range summarized {
+	for _, s := range rs.SummaryStrings() {
 		if _, err := out.WriteString(s + "\n"); err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}
