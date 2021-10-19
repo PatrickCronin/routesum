@@ -64,7 +64,10 @@ nfpms:
       - 'deb'
       - 'rpm'
     bindir: '/usr/bin'
-    files:
-      'CHANGELOG.md': '/usr/share/doc/routesum/CHANGELOG.md'
-      'LICENSE.md': '/usr/share/doc/routesum/LICENSE.md'
-      'README.md': '/usr/share/doc/routesum/README.md'
+    contents:
+      - src: 'CHANGELOG.md'
+        dst: '/usr/share/doc/routesum/CHANGELOG.md'
+      - src: 'LICENSE.md'
+        dst: '/usr/share/doc/routesum/LICENSE.md'
+      - src: 'README.md'
+        dst: '/usr/share/doc/routesum/README.md'

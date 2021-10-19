@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 0.2.0 (...)
+## 0.2.0 (2021-10-19)
 
 * Create a much more performant implementation
 
