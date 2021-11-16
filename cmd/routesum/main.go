@@ -32,6 +32,7 @@ func setupIOAndSummarize(inputPath, outputPath string) error {
 		if in, err = os.Open(inputPath); err != nil { // nolint: gosec
 			return fmt.Errorf("open input file for read: %w", err)
 		}
+		//nolint: gosec // see https://github.com/securego/gosec/issues/714
 		defer func() {
 			if err := in.Close(); err != nil {
 				fmt.Fprintln(os.Stderr, "failed to close input file")
@@ -47,6 +48,7 @@ func setupIOAndSummarize(inputPath, outputPath string) error {
 		if out, err = os.Create(outputPath); err != nil {
 			return fmt.Errorf("open file for write: %w", err)
 		}
+		//nolint: gosec // see https://github.com/securego/gosec/issues/714
 		defer func() {
 			if err := out.Close(); err != nil {
 				fmt.Fprintln(os.Stderr, "failed to close output file")
