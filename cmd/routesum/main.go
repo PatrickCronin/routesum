@@ -23,19 +23,17 @@ func main() {
 	}
 }
 
-func setupIOAndSummarize(inputPath, outputPath string) error {
+func setupIOAndSummarize(inputPath, outputPath string) (err error) {
 	var in *os.File
 	if inputPath == "-" {
 		in = os.Stdin
 	} else {
-		var err error
-		if in, err = os.Open(inputPath); err != nil { // nolint: gosec
-			return fmt.Errorf("open input file for read: %w", err)
+		if in, err = os.Open(inputPath); err != nil { //nolint: gosec
+			return
 		}
-		//nolint: gosec // see https://github.com/securego/gosec/issues/714
-		defer func() {
-			if err := in.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, "failed to close input file")
+		defer func() { //nolint: gosec // we return the error
+			if cerr := in.Close(); err != nil {
+				err = fmt.Errorf("failed to close input file: %w", cerr)
 			}
 		}()
 	}
@@ -44,23 +42,17 @@ func setupIOAndSummarize(inputPath, outputPath string) error {
 	if outputPath == "-" {
 		out = os.Stdout
 	} else {
-		var err error
 		if out, err = os.Create(outputPath); err != nil {
-			return fmt.Errorf("open file for write: %w", err)
+			return
 		}
-		//nolint: gosec // see https://github.com/securego/gosec/issues/714
-		defer func() {
-			if err := out.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, "failed to close output file")
+		defer func() { //nolint: gosec // we return the error
+			if cerr := out.Close(); err != nil {
+				err = fmt.Errorf("failed to close output file: %w", cerr)
 			}
 		}()
 	}
 
-	if err := summarize(in, out); err != nil {
-		return fmt.Errorf("summarize: %w", err)
-	}
-
-	return nil
+	return summarize(in, out)
 }
 
 func summarize(in io.Reader, out io.StringWriter) error {
