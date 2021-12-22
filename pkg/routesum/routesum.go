@@ -7,21 +7,21 @@ import (
 	"strings"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
-	"github.com/PatrickCronin/routesum/pkg/routesum/rstrie"
+	"github.com/PatrickCronin/routesum/pkg/routesum/rstree"
 	"github.com/pkg/errors"
 	"inet.af/netaddr"
 )
 
 // RouteSum has methods supporting route summarization of networks and hosts
 type RouteSum struct {
-	ipv4, ipv6 *rstrie.RSTrie
+	ipv4, ipv6 *rstree.RSTree
 }
 
 // NewRouteSum returns an initialized RouteSum object
 func NewRouteSum() *RouteSum {
 	rs := new(RouteSum)
-	rs.ipv4 = rstrie.NewRSTrie()
-	rs.ipv6 = rstrie.NewRSTrie()
+	rs.ipv4 = rstree.NewRSTree()
+	rs.ipv6 = rstree.NewRSTree()
 
 	return rs
 }
