@@ -34,7 +34,7 @@ given the following list of IPs and networks:
     198.51.100.5
     198.51.100.2/31
     198.51.100.6/31
-    
+
 `routesum` will output:
 
     198.51.100.1
@@ -68,22 +68,17 @@ Comments, questions or suggestions for improvements are welcome on our
 ## Usage
 
 ```bash
-$ routesum -h
-Usage of main:
-  -in string
-    	File to read. Use - for STDIN. (default "-")
-  -out string
-    	File to write. Use - for STDOUT. (default "-")
+$ routesum < infile.txt > outfile.txt
 ```
 
 ## Description
 
-`routesum` is a well-behaved CLI citizen. It can take input from either a file
-or from STDIN, and it can output to either a file or STDOUT.
+`routesum` is a well-behaved CLI citizen. It takes input from STDIN, and outputs
+to STDOUT.
 
 ```bash
-$ routesum -in=list.txt -out=summarized.txt
-$ cat input.txt | routesum > output.txt
+$ routesum < infile.txt > outfile.txt
+$ cat infile.txt | routesum > outfile.txt
 $ routesum
 192.0.2.0
 192.0.2.1
