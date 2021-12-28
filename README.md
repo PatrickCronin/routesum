@@ -48,8 +48,8 @@ How?
 * 198.51.100.1 and 198.51.100.2/31 weren't summarized, so they are just
   returned.
 
-This project has utility anywhere the shortest possible for of a list of IPs and
-networks is preferrable. It was initially conceived to facilitate automatic
+This project has utility anywhere the shortest possible form of a list of IPs
+and networks is preferrable. It was initially conceived to facilitate automatic
 daily updates to a set of firewall rules for blocking incoming connections. In
 that application, the number of items on the blocklist corresponds to the
 maximum number of comparisons that the firewall needs to make against every
