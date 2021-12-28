@@ -68,7 +68,10 @@ Comments, questions or suggestions for improvements are welcome on our
 ## Usage
 
 ```bash
-$ routesum < infile.txt > outfile.txt
+$ routesum -h
+Usage of routesum:
+  -show-mem-stats
+        Whether or not to write memory usage stats to STDERR.
 ```
 
 ## Description
