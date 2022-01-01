@@ -10,9 +10,6 @@ import (
 	"runtime"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum"
-
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 )
 
 func main() {
@@ -36,7 +33,7 @@ func main() {
 
 func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "Before work")
+		logMemStats(memStatsOut, "Before Summarize")
 	}
 
 	rs := routesum.NewRouteSum()
@@ -53,7 +50,7 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 	}
 
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "After building the summary")
+		logMemStats(memStatsOut, "After Summarize")
 	}
 
 	for _, s := range rs.SummaryStrings() {
@@ -63,7 +60,7 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 	}
 
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "After writing the summary")
+		logMemStats(memStatsOut, "After Writing")
 	}
 
 	return nil
@@ -76,37 +73,15 @@ func logMemStats(w io.Writer, message string) {
 	fmt.Fprintf(
 		w,
 		`%s
-  HeapAlloc (excludes freed mem):   %s
-  TotalAlloc (includes freed mem):  %s
-  Mallocs (included freed objects): %s
-  Freed objects:                    %s
+  HeapAlloc (excludes freed mem):   %d
+  TotalAlloc (includes freed mem):  %d
+  Mallocs (included freed objects): %d
+  Freed objects:                    %d
 `,
 		message,
-		formatByteCount(int64(m.HeapAlloc)),
-		formatByteCount(int64(m.TotalAlloc)),
-		formatNumber(m.Mallocs),
-		formatNumber(m.Frees),
+		m.HeapAlloc,
+		m.TotalAlloc,
+		m.Mallocs,
+		m.Frees,
 	)
-}
-
-func formatByteCount(b int64) string {
-	const unit = 1024
-
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-
-	div := int64(unit)
-	exp := 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
-}
-
-func formatNumber(n interface{}) string {
-	p := message.NewPrinter(language.English)
-	return p.Sprintf("%d", n)
 }
