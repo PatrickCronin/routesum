@@ -75,17 +75,17 @@ func logMemStatsDelta(w io.Writer, message string, first, second runtime.MemStat
 	fmt.Fprintf(
 		w,
 		`%s
-  Additionally Allocated: %d
-  Of that, freed:         %d
-  Of that, kept:          %d
-  Num Mallocs:            %d
-  Num Frees:              %d
+  Δ total allocated bytes: %d
+  Δ mallocs:               %d
+  Δ frees:                 %d
+  Δ live object bytes:     %d
+  Δ live objects:          %d
 `,
 		message,
 		second.TotalAlloc-first.TotalAlloc,
-		(second.TotalAlloc-first.TotalAlloc)-(second.HeapAlloc-first.HeapAlloc),
-		second.HeapAlloc-first.HeapAlloc,
 		second.Mallocs-first.Mallocs,
 		second.Frees-first.Frees,
+		int64(second.HeapAlloc)-int64(first.HeapAlloc),
+		int64(second.Mallocs-first.Mallocs)-int64(second.Frees-first.Frees),
 	)
 }
