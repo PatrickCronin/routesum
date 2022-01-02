@@ -32,8 +32,9 @@ func main() {
 }
 
 func summarize(in io.Reader, out, memStatsOut io.Writer) error {
+	var preRunMemStats runtime.MemStats
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "Before Summarize")
+		runtime.ReadMemStats(&preRunMemStats)
 	}
 
 	rs := routesum.NewRouteSum()
@@ -49,8 +50,10 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 		}
 	}
 
+	var dataStoredMemStats runtime.MemStats
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "After Summarize")
+		runtime.ReadMemStats(&dataStoredMemStats)
+		logMemStatsDelta(memStatsOut, "To Store Routes", preRunMemStats, dataStoredMemStats)
 	}
 
 	for _, s := range rs.SummaryStrings() {
@@ -60,28 +63,29 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 	}
 
 	if memStatsOut != nil {
-		logMemStats(memStatsOut, "After Writing")
+		var summaryWrittenMemStats runtime.MemStats
+		runtime.ReadMemStats(&summaryWrittenMemStats)
+		logMemStatsDelta(memStatsOut, "To Write Summary", dataStoredMemStats, summaryWrittenMemStats)
 	}
 
 	return nil
 }
 
-func logMemStats(w io.Writer, message string) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
+func logMemStatsDelta(w io.Writer, message string, first, second runtime.MemStats) {
 	fmt.Fprintf(
 		w,
 		`%s
-  HeapAlloc (excludes freed mem):   %d
-  TotalAlloc (includes freed mem):  %d
-  Mallocs (included freed objects): %d
-  Freed objects:                    %d
+  Additionally Allocated: %d
+  Of that, freed:         %d
+  Of that, kept:          %d
+  Num Mallocs:            %d
+  Num Frees:              %d
 `,
 		message,
-		m.HeapAlloc,
-		m.TotalAlloc,
-		m.Mallocs,
-		m.Frees,
+		second.TotalAlloc-first.TotalAlloc,
+		(second.TotalAlloc-first.TotalAlloc)-(second.HeapAlloc-first.HeapAlloc),
+		second.HeapAlloc-first.HeapAlloc,
+		second.Mallocs-first.Mallocs,
+		second.Frees-first.Frees,
 	)
 }

@@ -24,9 +24,7 @@ func TestSummarize(t *testing.T) {
 		{
 			name:         "with memory statistics",
 			showMemStats: true,
-			expected: regexp.MustCompile(
-				`Before Summarize(?:.|\n)+After Summarize(?:.|\n)+After Writing`,
-			),
+			expected:     regexp.MustCompile(`To Store Routes(?:.|\n)+To Write Summary`),
 		},
 	}
 
