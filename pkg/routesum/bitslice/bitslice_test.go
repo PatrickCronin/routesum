@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewBitSliceFromBytes(t *testing.T) { // nolint: funlen
+func TestNewBitSliceFromBytes(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
 		ip       string

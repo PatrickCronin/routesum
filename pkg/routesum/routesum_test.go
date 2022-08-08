@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStrings(t *testing.T) { // nolint: funlen
+func TestStrings(t *testing.T) { //nolint: funlen
 	// Summarization logic is tested in TestSummarize.
 
 	// Invalid IPs throw the expected error
@@ -115,7 +115,7 @@ func TestStrings(t *testing.T) { // nolint: funlen
 	}
 }
 
-func TestSummarize(t *testing.T) { // nolint: funlen
+func TestSummarize(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
 		input    []string

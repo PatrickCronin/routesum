@@ -43,7 +43,7 @@ func TestCommonPrefixLen(t *testing.T) {
 	}
 }
 
-func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
+func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
 		routes   []bitslice.BitSlice
@@ -160,7 +160,7 @@ func TestRSTrieInsertRoute(t *testing.T) { // nolint: funlen
 	}
 }
 
-func TestRSTrieContents(t *testing.T) { // nolint: funlen
+func TestRSTrieContents(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
 		trie     RSTrie

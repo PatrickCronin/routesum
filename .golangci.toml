@@ -11,7 +11,7 @@
     "errcheck",
     "errorlint",
     "exhaustive",
-    "exhaustivestruct",
+    "exhaustruct",
     "exportloopref",
     "funlen",
     "gochecknoglobals",
