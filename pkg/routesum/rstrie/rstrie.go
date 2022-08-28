@@ -187,17 +187,15 @@ func (t *RSTrie) Contents() []bitslice.BitSlice {
 	}
 
 	// Otherwise
-	queue := []traversalStep{
-		{
-			n:                  t.root,
-			precedingRouteBits: bitslice.BitSlice{},
-		},
-	}
+	remainingSteps := list.New()
+	remainingSteps.PushFront(traversalStep{
+		n:                  t.root,
+		precedingRouteBits: bitslice.BitSlice{},
+	})
 
 	contents := []bitslice.BitSlice{}
-	for len(queue) > 0 {
-		step := queue[0]
-		queue = queue[1:]
+	for remainingSteps.Len() > 0 {
+		step := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
 
 		stepRouteBits := bitslice.BitSlice{}
 		stepRouteBits = append(stepRouteBits, step.precedingRouteBits...)
@@ -206,16 +204,14 @@ func (t *RSTrie) Contents() []bitslice.BitSlice {
 		if step.n.isLeaf() {
 			contents = append(contents, stepRouteBits)
 		} else {
-			queue = append([]traversalStep{
-				{
-					n:                  step.n.children[0],
-					precedingRouteBits: stepRouteBits,
-				},
-				{
-					n:                  step.n.children[1],
-					precedingRouteBits: stepRouteBits,
-				},
-			}, queue...)
+			remainingSteps.PushFront(traversalStep{
+				n:                  step.n.children[1],
+				precedingRouteBits: stepRouteBits,
+			})
+			remainingSteps.PushFront(traversalStep{
+				n:                  step.n.children[0],
+				precedingRouteBits: stepRouteBits,
+			})
 		}
 	}
 
