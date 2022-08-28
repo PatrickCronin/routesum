@@ -1,3 +1,4 @@
+// Package main defines a program that summarizes a list of IPs and networks to its shortest form.
 package main
 
 import (
