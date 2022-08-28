@@ -15,7 +15,7 @@ func main() {
 	showMemStats := flag.Bool(
 		"show-mem-stats",
 		false,
-		"Whether or not to write memory usage stats to STDERR.",
+		"Whether or not to write memory usage stats to STDERR. (This functionity requires the use of `unsafe`, so may not be perfect.)", //nolint: lll
 	)
 	flag.Parse()
 
