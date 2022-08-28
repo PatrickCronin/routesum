@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum"
 )
@@ -32,11 +31,6 @@ func main() {
 }
 
 func summarize(in io.Reader, out, memStatsOut io.Writer) error {
-	var preRunMemStats runtime.MemStats
-	if memStatsOut != nil {
-		runtime.ReadMemStats(&preRunMemStats)
-	}
-
 	rs := routesum.NewRouteSum()
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
@@ -50,10 +44,21 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 		}
 	}
 
-	var dataStoredMemStats runtime.MemStats
 	if memStatsOut != nil {
-		runtime.ReadMemStats(&dataStoredMemStats)
-		logMemStatsDelta(memStatsOut, "To Store Routes", preRunMemStats, dataStoredMemStats)
+		numInternalNodes, numLeafNodes, internalNodesTotalSize, leafNodesTotalSize := rs.MemUsage()
+		fmt.Fprintf(memStatsOut,
+			`Num internal nodes:           %d
+Num leaf nodes:               %d
+Size of all internal nodes:   %d
+Size of all leaf nodes:       %d
+Total size of data structure: %d
+`,
+			numInternalNodes,
+			numLeafNodes,
+			internalNodesTotalSize,
+			leafNodesTotalSize,
+			internalNodesTotalSize+leafNodesTotalSize,
+		)
 	}
 
 	for _, s := range rs.SummaryStrings() {
@@ -62,30 +67,5 @@ func summarize(in io.Reader, out, memStatsOut io.Writer) error {
 		}
 	}
 
-	if memStatsOut != nil {
-		var summaryWrittenMemStats runtime.MemStats
-		runtime.ReadMemStats(&summaryWrittenMemStats)
-		logMemStatsDelta(memStatsOut, "To Write Summary", dataStoredMemStats, summaryWrittenMemStats)
-	}
-
 	return nil
-}
-
-func logMemStatsDelta(w io.Writer, message string, first, second runtime.MemStats) {
-	fmt.Fprintf(
-		w,
-		`%s
-  Δ total allocated bytes: %d
-  Δ mallocs:               %d
-  Δ frees:                 %d
-  Δ live object bytes:     %d
-  Δ live objects:          %d
-`,
-		message,
-		second.TotalAlloc-first.TotalAlloc,
-		second.Mallocs-first.Mallocs,
-		second.Frees-first.Frees,
-		int64(second.HeapAlloc)-int64(first.HeapAlloc),
-		int64(second.Mallocs-first.Mallocs)-int64(second.Frees-first.Frees),
-	)
 }

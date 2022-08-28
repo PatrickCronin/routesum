@@ -141,3 +141,13 @@ func ipv6FromBits(bits bitslice.BitSlice) netaddr.IP {
 	copy(byteArray[:], bytes[0:16])
 	return netaddr.IPv6Raw(byteArray)
 }
+
+// MemUsage provides information about memory usage.
+func (rs *RouteSum) MemUsage() (uint, uint, uintptr, uintptr) {
+	ipv4NumInternalNodes, ipv4NumLeafNodes, ipv4InternalNodesTotalSize, ipv4LeafNodesTotalSize := rs.ipv4.MemUsage()
+	ipv6NumInternalNodes, ipv6NumLeafNodes, ipv6InternalNodesTotalSize, ipv6LeafNodesTotalSize := rs.ipv6.MemUsage()
+	return ipv4NumInternalNodes + ipv6NumInternalNodes,
+		ipv4NumLeafNodes + ipv6NumLeafNodes,
+		ipv4InternalNodesTotalSize + ipv6InternalNodesTotalSize,
+		ipv4LeafNodesTotalSize + ipv6LeafNodesTotalSize
+}
