@@ -6,7 +6,6 @@
   disable-all = true
   enable = [
     "asciicheck",
-    "deadcode",
     "dogsled",
     "errcheck",
     "errorlint",
@@ -32,13 +31,11 @@
     "prealloc",
     "revive",
     "staticcheck",
-    "structcheck",
     "stylecheck",
     "typecheck",
     "unconvert",
     "unparam",
     "unused",
-    "varcheck",
     "vetshadow",
     "wrapcheck",
   ]
