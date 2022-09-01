@@ -3,6 +3,7 @@ package routesum
 
 import (
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
@@ -27,12 +28,12 @@ func NewRouteSum() *RouteSum {
 
 // InsertFromString adds either a string-formatted network or IP to the summary
 func (rs *RouteSum) InsertFromString(s string) error {
-	var ip netaddr.IP
+	var ip netip.Addr
 	var ipBits bitslice.BitSlice
 	var err error
 
 	if strings.Contains(s, "/") {
-		ipPrefix, err := netaddr.ParseIPPrefix(s)
+		ipPrefix, err := netip.ParsePrefix(s)
 		if err != nil {
 			return fmt.Errorf("parse network: %w", err)
 		}
@@ -40,13 +41,13 @@ func (rs *RouteSum) InsertFromString(s string) error {
 			return errors.Errorf("%s is not valid CIDR", s)
 		}
 
-		ip = ipPrefix.IP()
+		ip = ipPrefix.Addr()
 		ipBits, err = ipBitsForIPPrefix(ipPrefix)
 		if err != nil {
 			return err
 		}
 	} else {
-		ip, err = netaddr.ParseIP(s)
+		ip, err = netip.ParseAddr(s)
 		if err != nil {
 			return fmt.Errorf("parse IP: %w", err)
 		}
@@ -69,21 +70,21 @@ func (rs *RouteSum) InsertFromString(s string) error {
 	return nil
 }
 
-func ipBitsForIPPrefix(ipPrefix netaddr.IPPrefix) (bitslice.BitSlice, error) {
-	ipBytes, err := ipPrefix.IP().MarshalBinary()
+func ipBitsForIPPrefix(ipPrefix netip.Prefix) (bitslice.BitSlice, error) {
+	ipBytes, err := ipPrefix.Addr().MarshalBinary()
 	if err != nil {
-		return nil, errors.Wrapf(err, "express %s as bytes", ipPrefix.IP().String())
+		return nil, errors.Wrapf(err, "express %s as bytes", ipPrefix.Addr().String())
 	}
 
 	ipBits, err := bitslice.NewFromBytes(ipBytes)
 	if err != nil {
-		return nil, fmt.Errorf("express %s as bits: %w", ipPrefix.IP().String(), err)
+		return nil, fmt.Errorf("express %s as bits: %w", ipPrefix.Addr().String(), err)
 	}
 
 	return ipBits[:ipPrefix.Bits()], nil
 }
 
-func ipBitsForIP(ip netaddr.IP) (bitslice.BitSlice, error) {
+func ipBitsForIP(ip netip.Addr) (bitslice.BitSlice, error) {
 	ipBytes, err := ip.MarshalBinary()
 	if err != nil {
 		return nil, errors.Wrapf(err, "express %s as bytes", ip.String())
