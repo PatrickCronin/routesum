@@ -18,7 +18,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 		"2001:db8:",
 		"not an IP",
 	}
-	invalidIPErr := regexp.MustCompile(`ParseIP`)
+	invalidIPErr := regexp.MustCompile(`ParseAddr`)
 	for _, invalidIP := range invalidIPs {
 		t.Run(invalidIP, func(t *testing.T) {
 			rs := NewRouteSum()
@@ -40,7 +40,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 		"2001:db8::/129",
 		"not/a/network",
 	}
-	invalidNetErr := regexp.MustCompile(`ParseIPPrefix`)
+	invalidNetErr := regexp.MustCompile(`ParsePrefix`)
 	for _, invalidNet := range invalidNets {
 		t.Run(invalidNet, func(t *testing.T) {
 			rs := NewRouteSum()

@@ -1,12 +1,12 @@
 package rstrie
 
 import (
+	"net/netip"
 	"testing"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"inet.af/netaddr"
 )
 
 func TestCommonPrefixLen(t *testing.T) {
@@ -272,7 +272,7 @@ func TestRSTrieMemUsage(t *testing.T) {
 			trie := NewRSTrie()
 
 			for _, entry := range test.entries {
-				ip := netaddr.MustParseIP(entry)
+				ip := netip.MustParseAddr(entry)
 				ipBytes, err := ip.MarshalBinary()
 				require.NoError(t, err)
 				ipBits, err := bitslice.NewFromBytes(ipBytes)

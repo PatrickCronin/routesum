@@ -1,9 +1,8 @@
 package bitslice
 
 import (
+	"net/netip"
 	"testing"
-
-	"inet.af/netaddr"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,7 +72,7 @@ func TestNewBitSliceFromBytes(t *testing.T) { //nolint: funlen
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ip := netaddr.MustParseIP(test.ip)
+			ip := netip.MustParseAddr(test.ip)
 			ipBytes, err := ip.MarshalBinary()
 			require.NoError(t, err)
 
