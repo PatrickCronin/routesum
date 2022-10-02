@@ -18,15 +18,18 @@ func TestStrings(t *testing.T) { //nolint: funlen
 		"2001:db8:",
 		"not an IP",
 	}
-	invalidIPErr := regexp.MustCompile(`ParseAddr`)
+	invalidIPErr := regexp.MustCompile("parse `.*?` as IP")
 	for _, invalidIP := range invalidIPs {
 		t.Run(invalidIP, func(t *testing.T) {
-			rs := NewRouteSum()
+			rs := New()
 			err := rs.InsertFromString(invalidIP)
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidIPErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+			assert.Equal(t, []string{}, strs, "nothing was added")
 		})
 	}
 
@@ -40,15 +43,18 @@ func TestStrings(t *testing.T) { //nolint: funlen
 		"2001:db8::/129",
 		"not/a/network",
 	}
-	invalidNetErr := regexp.MustCompile(`ParsePrefix`)
+	invalidNetErr := regexp.MustCompile("parse `.*?` as network")
 	for _, invalidNet := range invalidNets {
 		t.Run(invalidNet, func(t *testing.T) {
-			rs := NewRouteSum()
+			rs := New()
 			err := rs.InsertFromString(invalidNet)
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidNetErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+			assert.Equal(t, []string{}, strs, "nothing was added")
 		})
 	}
 
@@ -70,8 +76,8 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			expected: []string{
 				"192.0.2.0",
 				"198.51.100.0/24",
-				"::ffff:c000:200",
-				"::ffff:c633:6400/120",
+				"::ffff:192.0.2.0",
+				"::ffff:198.51.100.0/120",
 				"2001:db8::",
 				"2001:db8:1::/48",
 			},
@@ -88,7 +94,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
@@ -105,12 +111,15 @@ func TestStrings(t *testing.T) { //nolint: funlen
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rs := NewRouteSum()
+			rs := New()
 			for _, str := range test.input {
 				err := rs.InsertFromString(str)
 				require.NoError(t, err)
 			}
-			assert.Equal(t, test.expected, rs.SummaryStrings(), "summarized as expected")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, strs, "summarized as expected")
 		})
 	}
 }
@@ -140,8 +149,8 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			expected: []string{
 				"192.0.2.0",
 				"198.51.100.0/31",
-				"::ffff:c000:200",
-				"::ffff:c633:6400/127",
+				"::ffff:192.0.2.0",
+				"::ffff:198.51.100.0/127",
 				"2001:db8::",
 				"2001:db8::1:0/127",
 			},
@@ -158,7 +167,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/26",
-				"::ffff:c000:200/120",
+				"::ffff:192.0.2.0/120",
 				"2001:db8::/120",
 			},
 		},
@@ -174,7 +183,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:c000:200/127",
+				"::ffff:192.0.2.0/127",
 				"2001:db8::/127",
 			},
 		},
@@ -196,7 +205,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/30",
-				"::ffff:c000:200/126",
+				"::ffff:192.0.2.0/126",
 				"2001:db8::/126",
 			},
 		},
@@ -321,7 +330,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/24",
-				"::ffff:c000:200/120",
+				"::ffff:192.0.2.0/120",
 				"2001:db8::/32",
 			},
 		},
@@ -360,12 +369,12 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 				"198.51.100.2/31",
 				"198.51.100.4/30",
 				"198.51.100.8/31",
-				"::ffff:c000:201",
-				"::ffff:c000:202/127",
-				"::ffff:c000:204",
-				"::ffff:c633:6402/127",
-				"::ffff:c633:6404/126",
-				"::ffff:c633:6408/127",
+				"::ffff:192.0.2.1",
+				"::ffff:192.0.2.2/127",
+				"::ffff:192.0.2.4",
+				"::ffff:198.51.100.2/127",
+				"::ffff:198.51.100.4/126",
+				"::ffff:198.51.100.8/127",
 				"2001:db8::1",
 				"2001:db8::2/127",
 				"2001:db8::4",
@@ -389,7 +398,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:c000:200/127",
+				"::ffff:192.0.2.0/127",
 				"2001:db8::/127",
 			},
 		},
@@ -399,7 +408,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 				"::ffff:192.0.2.0",
 			},
 			expected: []string{
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 			},
 		},
 		{
@@ -410,7 +419,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 			},
 		},
 		{
@@ -422,7 +431,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
@@ -438,7 +447,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
@@ -446,12 +455,14 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rs := NewRouteSum()
+			rs := New()
 			for _, str := range test.input {
 				err := rs.InsertFromString(str)
 				require.NoError(t, err)
 			}
-			assert.Equal(t, test.expected, rs.SummaryStrings(), "got expected summary")
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, strs, "got expected summary")
 		})
 	}
 }
@@ -515,7 +526,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			rs := NewRouteSum()
+			rs := New()
 
 			for _, entry := range test.entries {
 				err := rs.InsertFromString(entry)
