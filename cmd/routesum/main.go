@@ -32,7 +32,7 @@ func main() {
 }
 
 func summarize(in io.Reader, out, memStatsOut io.Writer) error {
-	rs := routesum.NewRouteSum()
+	rs := routesum.New()
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		line := bytes.TrimSpace(scanner.Bytes())
@@ -62,7 +62,12 @@ Total size of data structure: %d
 		)
 	}
 
-	for _, s := range rs.SummaryStrings() {
+	strs, err := rs.SummaryStrings()
+	if err != nil {
+		return err //nolint: wrapcheck
+	}
+
+	for _, s := range strs {
 		if _, err := out.Write([]byte(s + "\n")); err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}
