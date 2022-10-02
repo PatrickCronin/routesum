@@ -1,113 +1,98 @@
 package rstrie
 
 import (
-	"net/netip"
 	"testing"
 
-	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
+	"github.com/PatrickCronin/routesum/pkg/routesum/routetype"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestCommonPrefixLen(t *testing.T) {
+func TestRSTrieV4InsertRoute(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
-		a, b     bitslice.BitSlice
-		expected int
-	}{
-		{
-			name:     "differing first bit",
-			a:        bitslice.BitSlice{0},
-			b:        bitslice.BitSlice{1},
-			expected: 0,
-		},
-		{
-			name:     "differing second bit",
-			a:        bitslice.BitSlice{0, 0},
-			b:        bitslice.BitSlice{0, 1},
-			expected: 1,
-		},
-		{
-			name:     "nothing different",
-			a:        bitslice.BitSlice{0, 0, 0, 1},
-			b:        bitslice.BitSlice{0, 0, 0, 1},
-			expected: 4,
-		},
-	}
-
-	for _, test := range tests {
-		assert.Equal(
-			t,
-			test.expected,
-			commonPrefixLen(test.a, test.b),
-			test.name,
-		)
-	}
-}
-
-func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
-	tests := []struct {
-		name     string
-		routes   []bitslice.BitSlice
-		expected *RSTrie
+		routes   []string
+		expected *RSTrie[*routetype.V4]
 	}{
 		{
 			name:   "add one child",
-			routes: []bitslice.BitSlice{{0}},
-			expected: &RSTrie{
-				root: &node{
-					bits:     bitslice.BitSlice{0},
+			routes: []string{"0.0.0.0/17"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/17"),
 					children: nil,
 				},
 			},
 		},
 		{
 			name:   "add two children, completing the root node's subtrie",
-			routes: []bitslice.BitSlice{{0}, {1}},
-			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
-				children: nil,
-			}},
+			routes: []string{"0.0.0.0/1", "128.0.0.0/1"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/0"),
+					children: nil,
+				},
+			},
 		},
 		{
 			name:   "split root, root is empty",
-			routes: []bitslice.BitSlice{{0, 0}, {1, 1}},
-			expected: &RSTrie{
-				root: &node{
-					bits: bitslice.BitSlice{},
-					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0, 0}},
-						1: {bits: bitslice.BitSlice{1, 1}},
+			routes: []string{"0.0.0.0/2", "192.0.0.0/2"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route: routetype.MustParseV4String("0.0.0.0/0"),
+					children: &[2]*node[*routetype.V4]{
+						{
+							route:    routetype.MustParseV4String("0.0.0.0/2"),
+							children: nil,
+						},
+						{
+							route:    routetype.MustParseV4String("192.0.0.0/2"),
+							children: nil,
+						},
 					},
 				},
 			},
 		},
 		{
 			name:   "split root, root is not empty",
-			routes: []bitslice.BitSlice{{0, 0}, {0, 1, 0}},
-			expected: &RSTrie{
-				root: &node{
-					bits: bitslice.BitSlice{0},
-					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
-						1: {bits: bitslice.BitSlice{1, 0}},
+			routes: []string{"0.0.0.0/2", "64.0.0.0/3"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route: routetype.MustParseV4String("0.0.0.0/1"),
+					children: &[2]*node[*routetype.V4]{
+						{
+							route:    routetype.MustParseV4String("0.0.0.0/2"),
+							children: nil,
+						},
+						{
+							route:    routetype.MustParseV4String("64.0.0.0/3"),
+							children: nil,
+						},
 					},
 				},
 			},
 		},
 		{
 			name:   "split root, traverse, and split internal",
-			routes: []bitslice.BitSlice{{0}, {1, 0, 0}, {1, 1, 0}},
-			expected: &RSTrie{
-				root: &node{
-					bits: bitslice.BitSlice{},
-					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
-						1: {
-							bits: bitslice.BitSlice{1},
-							children: &[2]*node{
-								0: {bits: bitslice.BitSlice{0, 0}},
-								1: {bits: bitslice.BitSlice{1, 0}},
+			routes: []string{"0.0.0.0/1", "128.0.0.0/3", "192.0.0.0/3"}, // 0, 1-0-0, 1-1-0
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route: routetype.MustParseV4String("0.0.0.0/0"),
+					children: &[2]*node[*routetype.V4]{
+						{
+							route:    routetype.MustParseV4String("0.0.0.0/1"),
+							children: nil,
+						},
+						{
+							route: routetype.MustParseV4String("128.0.0.0/1"),
+							children: &[2]*node[*routetype.V4]{
+								{
+									route:    routetype.MustParseV4String("128.0.0.0/3"),
+									children: nil,
+								},
+								{
+									route:    routetype.MustParseV4String("192.0.0.0/3"),
+									children: nil,
+								},
 							},
 						},
 					},
@@ -115,46 +100,71 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			},
 		},
 		{
+			name:   "failing parent test",
+			routes: []string{"192.0.2.1", "192.0.2.2", "192.0.2.3", "192.0.2.4"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route: routetype.MustParseV4String("192.0.2.0/29"),
+					children: &[2]*node[*routetype.V4]{
+						{
+							route: routetype.MustParseV4String("192.0.2.0/30"),
+							children: &[2]*node[*routetype.V4]{
+								{
+									route:    routetype.MustParseV4String("192.0.2.1"),
+									children: nil,
+								},
+								{
+									route:    routetype.MustParseV4String("192.0.2.2/31"),
+									children: nil,
+								},
+							},
+						},
+						{
+							route:    routetype.MustParseV4String("192.0.2.4"),
+							children: nil,
+						},
+					},
+				},
+			},
+		},
+		{
 			name:   "covered routes are ignored",
-			routes: []bitslice.BitSlice{{0}, {0, 0}},
-			expected: &RSTrie{
-				root: &node{
-					bits:     bitslice.BitSlice{0},
+			routes: []string{"0.0.0.0/1", "0.0.0.0/2"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/1"),
 					children: nil,
 				},
 			},
 		},
 		{
 			name:   "route covering node replaces it",
-			routes: []bitslice.BitSlice{{0, 0}, {0}},
-			expected: &RSTrie{
-				root: &node{
-					bits:     bitslice.BitSlice{0},
+			routes: []string{"0.0.0.0/2", "0.0.0.0/1"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/1"),
 					children: nil,
 				},
 			},
 		},
 		{
-			name: "completed subtries are simpliflied",
-			routes: []bitslice.BitSlice{
-				{1},
-				{0, 1},
-				{0, 0, 1},
-				{0, 0, 0},
+			name:   "completed subtries are simplified",
+			routes: []string{"128.0.0.0/1", "64.0.0.0/2", "32.0.0.0/3", "0.0.0.0/3"},
+			expected: &RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/0"),
+					children: nil,
+				},
 			},
-			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
-				children: nil,
-			}},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			trie := NewRSTrie()
+			trie := New[*routetype.V4]()
 
-			for _, route := range test.routes {
-				trie.InsertRoute(route)
+			for _, r := range test.routes {
+				trie.InsertRoute(routetype.MustParseV4String(r))
 			}
 
 			assert.Equal(t, test.expected, trie, "got expected rstrie")
@@ -162,72 +172,80 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 	}
 }
 
-func TestRSTrieContents(t *testing.T) { //nolint: funlen
+func TestRSTrieV4Contents(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
-		trie     RSTrie
-		expected []bitslice.BitSlice
+		trie     RSTrie[*routetype.V4]
+		expected []*routetype.V4
 	}{
 		{
 			name: "complete trie",
-			trie: RSTrie{
-				root: &node{
-					bits:     nil,
+			trie: RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/0"),
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{}},
+			expected: []*routetype.V4{routetype.MustParseV4String("0.0.0.0/0")},
 		},
 		{
 			name: "empty trie",
-			trie: RSTrie{
+			trie: RSTrie[*routetype.V4]{
 				root: nil,
 			},
-			expected: []bitslice.BitSlice{},
+			expected: []*routetype.V4(nil),
 		},
 		{
 			name: "single zero-child trie",
-			trie: RSTrie{
-				root: &node{
-					bits:     bitslice.BitSlice{0},
+			trie: RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("0.0.0.0/1"),
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{0}},
+			expected: []*routetype.V4{routetype.MustParseV4String("0.0.0.0/1")},
 		},
 		{
 			name: "single one-child trie",
-			trie: RSTrie{
-				root: &node{
-					bits:     bitslice.BitSlice{1},
+			trie: RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route:    routetype.MustParseV4String("128.0.0.0/1"),
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{1}},
+			expected: []*routetype.V4{routetype.MustParseV4String("128.0.0.0/1")},
 		},
 		{
 			name: "two-level trie",
-			trie: RSTrie{
-				root: &node{
-					bits: bitslice.BitSlice{0, 0},
-					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
-						1: {bits: bitslice.BitSlice{1, 0}},
+			trie: RSTrie[*routetype.V4]{
+				root: &node[*routetype.V4]{
+					route: routetype.MustParseV4String("0.0.0.0/2"),
+					children: &[2]*node[*routetype.V4]{
+						{
+							route:    routetype.MustParseV4String("0.0.0.0/3"),
+							children: nil,
+						},
+						{
+							route: routetype.MustParseV4String("32.0.0.0/4"),
+						},
 					},
 				},
 			},
-			expected: []bitslice.BitSlice{{0, 0, 0}, {0, 0, 1, 0}},
+			expected: []*routetype.V4{
+				routetype.MustParseV4String("0.0.0.0/3"),
+				routetype.MustParseV4String("32.0.0.0/4"),
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.expected, test.trie.Contents(), "got expected bits")
+			assert.Equal(t, test.expected, test.trie.Contents(), "got expected contents")
 		})
 	}
 }
 
-func TestRSTrieMemUsage(t *testing.T) {
+func TestRSTrieV4MemUsage(t *testing.T) {
 	tests := []struct {
 		name                     string
 		entries                  []string
@@ -269,15 +287,11 @@ func TestRSTrieMemUsage(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			trie := NewRSTrie()
+			trie := New[*routetype.V4]()
 
 			for _, entry := range test.entries {
-				ip := netip.MustParseAddr(entry)
-				ipBytes, err := ip.MarshalBinary()
-				require.NoError(t, err)
-				ipBits, err := bitslice.NewFromBytes(ipBytes)
-				require.NoError(t, err)
-				trie.InsertRoute(ipBits)
+				ipv4 := routetype.MustParseV4String(entry)
+				trie.InsertRoute(ipv4)
 			}
 
 			numInternalNodes, numLeafNodes, _, _ := trie.MemUsage()
