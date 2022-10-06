@@ -455,3 +455,76 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 		})
 	}
 }
+
+func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
+	tests := []struct {
+		name                     string
+		entries                  []string
+		expectedNumInternalNodes uint
+		expectedNumLeafNodes     uint
+	}{
+		{
+			name:                     "new trie",
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     0,
+		},
+		{
+			name: "one item, IPv4",
+			entries: []string{
+				"192.0.2.1",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     1,
+		},
+		{
+			name: "two items, IPv4, summarized",
+			entries: []string{
+				"192.0.2.1",
+				"192.0.2.0",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     1,
+		},
+		{
+			name: "two items, IPv4, unsummarized",
+			entries: []string{
+				"192.0.2.1",
+				"192.0.2.2",
+			},
+			expectedNumInternalNodes: 1,
+			expectedNumLeafNodes:     2,
+		},
+		{
+			name: "one item, IPv6",
+			entries: []string{
+				"2001:db8::1",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     1,
+		},
+		{
+			name: "one IPv4 address, one IPv6 address",
+			entries: []string{
+				"192.0.2.0",
+				"2001:db8::1",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rs := NewRouteSum()
+
+			for _, entry := range test.entries {
+				err := rs.InsertFromString(entry)
+				require.NoError(t, err)
+			}
+
+			numInternalNodes, numLeafNodes, _, _ := rs.MemUsage()
+			assert.Equal(t, test.expectedNumInternalNodes, numInternalNodes, "num internal nodes")
+			assert.Equal(t, test.expectedNumLeafNodes, numLeafNodes, "num leaf nodes")
+		})
+	}
+}
