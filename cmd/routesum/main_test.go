@@ -41,7 +41,7 @@ func TestSummarize(t *testing.T) {
 				memStatsOut = &memStatsBuilder
 			}
 
-			err := summarize(in, &out, memStatsOut)
+			err := summarize(in, &out, memStatsOut, nil)
 			require.NoError(t, err, "summarize does not throw an error")
 
 			assert.Equal(t, "192.0.2.0/31\n", out.String(), "read expected output")
