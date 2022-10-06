@@ -4,7 +4,6 @@ package rstrie
 import (
 	"bytes"
 	"container/list"
-	"unsafe"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 )
@@ -216,62 +215,4 @@ func (t *RSTrie) Contents() []bitslice.BitSlice {
 	}
 
 	return contents
-}
-
-func (t *RSTrie) visitAll(cb func(*node)) {
-	// If the trie is empty
-	if t.root == nil {
-		return
-	}
-
-	// Otherwise
-	remainingSteps := list.New()
-	remainingSteps.PushFront(traversalStep{
-		n:                  t.root,
-		precedingRouteBits: bitslice.BitSlice{},
-	})
-
-	for remainingSteps.Len() > 0 {
-		curNode := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
-
-		// Act on this node
-		cb(curNode.n)
-
-		// Traverse the remainder of the nodes
-		if !curNode.n.isLeaf() {
-			curNodeRouteBits := bitslice.BitSlice{}
-			curNodeRouteBits = append(curNodeRouteBits, curNode.precedingRouteBits...)
-			curNodeRouteBits = append(curNodeRouteBits, curNode.n.bits...)
-
-			remainingSteps.PushFront(traversalStep{
-				n:                  curNode.n.children[1],
-				precedingRouteBits: curNodeRouteBits,
-			})
-			remainingSteps.PushFront(traversalStep{
-				n:                  curNode.n.children[0],
-				precedingRouteBits: curNodeRouteBits,
-			})
-		}
-	}
-}
-
-// MemUsage returns information about an RSTrie's current size in memory.
-func (t *RSTrie) MemUsage() (uint, uint, uintptr, uintptr) {
-	var numInternalNodes, numLeafNodes uint
-	var internalNodesTotalSize, leafNodesTotalSize uintptr
-
-	tallyNode := func(n *node) {
-		baseNodeSize := unsafe.Sizeof(node{}) + uintptr(cap(n.bits))*unsafe.Sizeof([1]byte{}) //nolint: exhaustruct, gosec, lll
-		if n.isLeaf() {
-			numLeafNodes++
-			leafNodesTotalSize += baseNodeSize
-			return
-		}
-
-		numInternalNodes++
-		internalNodesTotalSize += baseNodeSize + unsafe.Sizeof([2]*node{}) //nolint: gosec
-	}
-	t.visitAll(tallyNode)
-
-	return numInternalNodes, numLeafNodes, internalNodesTotalSize, leafNodesTotalSize
 }
