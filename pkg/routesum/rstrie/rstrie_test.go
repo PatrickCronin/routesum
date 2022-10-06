@@ -1,10 +1,12 @@
 package rstrie
 
 import (
+	"net/netip"
 	"testing"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCommonPrefixLen(t *testing.T) {
@@ -233,6 +235,66 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, test.expected, test.trie.Contents(), "got expected bits")
+		})
+	}
+}
+
+func TestRSTrieMemUsage(t *testing.T) {
+	tests := []struct {
+		name                     string
+		entries                  []string
+		expectedNumInternalNodes uint
+		expectedNumLeafNodes     uint
+	}{
+		{
+			name:                     "new trie",
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     0,
+		},
+		{
+			name: "one item",
+			entries: []string{
+				"192.0.2.1",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     1,
+		},
+		{
+			name: "two items, summarized",
+			entries: []string{
+				"192.0.2.1",
+				"192.0.2.0",
+			},
+			expectedNumInternalNodes: 0,
+			expectedNumLeafNodes:     1,
+		},
+		{
+			name: "two items, unsummarized",
+			entries: []string{
+				"192.0.2.1",
+				"192.0.2.2",
+			},
+			expectedNumInternalNodes: 1,
+			expectedNumLeafNodes:     2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			trie := NewRSTrie()
+
+			for _, entry := range test.entries {
+				ip := netip.MustParseAddr(entry)
+				ipBytes, err := ip.MarshalBinary()
+				require.NoError(t, err)
+				ipBits, err := bitslice.NewFromBytes(ipBytes)
+				require.NoError(t, err)
+				trie.InsertRoute(ipBits)
+			}
+
+			numInternalNodes, numLeafNodes, _, _ := trie.MemUsage()
+			assert.Equal(t, test.expectedNumInternalNodes, numInternalNodes, "num internal nodes")
+			assert.Equal(t, test.expectedNumLeafNodes, numLeafNodes, "num leaf nodes")
 		})
 	}
 }
