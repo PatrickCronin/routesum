@@ -15,19 +15,28 @@ import (
 )
 
 func main() {
-	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+	cpuProfile := flag.String("cpuprofile", "", "write cpu profile to file")
+	memProfile := flag.String("memprofile", "", "write mem profile to file")
 	flag.Parse()
 
 	var cpuProfOut io.Writer
-	if *cpuprofile != "" {
+	if *cpuProfile != "" {
 		var err error
-		if cpuProfOut, err = os.Create(*cpuprofile); err != nil {
+		if cpuProfOut, err = os.Create(*cpuProfile); err != nil {
 			fmt.Fprint(os.Stderr, errors.Wrap(err, "create cpu profile output file").Error())
 			os.Exit(1)
 		}
 	}
 
-	if err := summarize(os.Stdin, os.Stdout, cpuProfOut); err != nil {
+	var memProfOut io.WriteCloser
+	if *memProfile != "" {
+		var err error
+		if memProfOut, err = os.Create(*memProfile); err != nil {
+			fmt.Fprint(os.Stderr, errors.Wrap(err, "create mem profile output file").Error())
+		}
+	}
+
+	if err := summarize(os.Stdin, os.Stdout, cpuProfOut, memProfOut); err != nil {
 		fmt.Fprintf(os.Stderr, "summarize: %s\n", err.Error())
 		os.Exit(1)
 	}
@@ -36,6 +45,7 @@ func main() {
 func summarize(
 	in io.Reader,
 	out, cpuProfOut io.Writer,
+	memProfOut io.WriteCloser,
 ) error {
 	if cpuProfOut != nil {
 		if err := pprof.StartCPUProfile(cpuProfOut); err != nil {
@@ -54,6 +64,15 @@ func summarize(
 
 		if err := rs.InsertFromString(string(line)); err != nil {
 			return fmt.Errorf("add string: %w", err)
+		}
+	}
+
+	if memProfOut != nil {
+		if err := pprof.WriteHeapProfile(memProfOut); err != nil {
+			return errors.Wrap(err, "write mem profile")
+		}
+		if err := memProfOut.Close(); err != nil {
+			return errors.Wrap(err, "close mem profile")
 		}
 	}
 
