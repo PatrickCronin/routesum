@@ -109,6 +109,11 @@ func (r *V4) CommonAncestor(r2 *V4) *V4 {
 	}
 }
 
+// MaxBits returns the maximum number of bits that can be stored in the routetype.
+func (r *V4) MaxBits() uint8 {
+	return 32
+}
+
 // NthBit returns the nth bit. The most significant bit is bit 1.
 func (r *V4) NthBit(n uint8) uint8 {
 	return uint8((r.ip >> (32 - n)) & 1)

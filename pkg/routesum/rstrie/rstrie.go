@@ -14,6 +14,7 @@ type route[T any] interface {
 	Bits() uint8
 	CommonAncestor(T) T
 	Contains(T) bool
+	MaxBits() uint8
 	NthBit(uint8) uint8
 	Size() uintptr
 }
@@ -54,7 +55,7 @@ func (t *RSTrie[T]) InsertRoute(r T) { //nolint: funlen
 
 	// Otherwise, perform a non-recursive search of the trie's nodes for the best place to insert
 	// the route, and do so.
-	visited := make([]*node[T], 0, 128)
+	visited := make([]*node[T], 0, r.MaxBits())
 	var traversedChild uint8
 	curNode := t.root
 
