@@ -55,7 +55,7 @@ func (t *RSTrie[T]) InsertRoute(r T) { //nolint: funlen
 
 	// Otherwise, perform a non-recursive search of the trie's nodes for the best place to insert
 	// the route, and do so.
-	visited := make([]*node[T], 0, r.MaxBits())
+	visited := make([]*node[T], 0, 128)
 	var traversedChild uint8
 	curNode := t.root
 
