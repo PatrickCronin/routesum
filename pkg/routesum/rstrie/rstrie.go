@@ -42,77 +42,74 @@ func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
 		return
 	}
 
-	// Otherwise, perform a non-recursive search of the trie's nodes for the best place to insert the route, and do so.
-	visited := make([]*node, 0, 128)
-	curNode := t.root
-	remainingRouteBits := routeBits
-
-	for {
-		remainingRouteBitsLen := len(remainingRouteBits)
-		curNodeBitsLen := len(curNode.bits)
-
-		// Does the requested route cover the current node? If so, update the current node.
-		if remainingRouteBitsLen <= curNodeBitsLen && bytes.HasPrefix(curNode.bits, remainingRouteBits) {
-			curNode.bits = remainingRouteBits
-			curNode.children = nil
-			return
-		}
-
-		if curNodeBitsLen <= remainingRouteBitsLen && bytes.HasPrefix(remainingRouteBits, curNode.bits) {
-			// Does the current node cover the requested route? If so, we're done.
-			if curNode.isLeaf() {
-				return
-			}
-
-			// Otherwise, we traverse to the correct child.
-			remainingRouteBits = remainingRouteBits[curNodeBitsLen:]
-			visited = append(visited, curNode)
-			curNode = curNode.children[remainingRouteBits[0]]
-			continue
-		}
-
-		// Otherwise the requested route diverges from the current node. We'll need to split the current node.
-
-		// As an optimization, if the split would result in a new node whose children represent a complete subtrie, we
-		// just update the current node, instead of allocating new nodes and optimizing them away immediately after.
-		if curNode.isLeaf() &&
-			curNodeBitsLen == remainingRouteBitsLen &&
-			commonPrefixLen(curNode.bits, remainingRouteBits) == len(curNode.bits)-1 {
-			curNode.bits = curNode.bits[:len(curNode.bits)-1]
-			curNode.children = nil
-		} else {
-			newNode := splitNodeForRoute(curNode, remainingRouteBits)
-			visitedLen := len(visited)
-			if visitedLen == 0 {
-				t.root = newNode
-			} else {
-				visited[visitedLen-1].children[newNode.bits[0]] = newNode
-			}
-		}
-
-		simplifyVisitedSubtries(visited)
-		return
-	}
-}
-
-func (n *node) childrenAreCompleteSubtrie() bool {
-	if n.isLeaf() {
-		return false
-	}
-
-	if !n.children[0].isLeaf() || !n.children[1].isLeaf() {
-		return false
-	}
-
-	if len(n.children[0].bits) != 1 || len(n.children[1].bits) != 1 {
-		return false
-	}
-
-	return true
+	t.root.insertRoute(&t.root, routeBits)
 }
 
 func (n *node) isLeaf() bool {
 	return n.children == nil
+}
+
+// parent is a **node so that we can change what the parent is pointing to if we need to!
+func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) bool {
+	remainingRouteBitsLen := len(remainingRouteBits)
+	curNodeBitsLen := len(n.bits)
+
+	// Does the requested route cover the current node? If so, update the current node.
+	if remainingRouteBitsLen <= curNodeBitsLen && bytes.HasPrefix(n.bits, remainingRouteBits) {
+		n.bits = remainingRouteBits
+		n.children = nil
+		return false
+	}
+
+	if curNodeBitsLen <= remainingRouteBitsLen && bytes.HasPrefix(remainingRouteBits, n.bits) {
+		// Does the current node cover the requested route? If so, we're done.
+		if n.isLeaf() {
+			return false
+		}
+
+		// Otherwise, we traverse to the correct child.
+		whichChild := remainingRouteBits[curNodeBitsLen]
+		if n.children[whichChild].insertRoute(&n.children[whichChild], remainingRouteBits[curNodeBitsLen:]) {
+			return n.maybeRemoveRedundantChildren()
+		}
+
+		return false
+	}
+
+	// Otherwise the requested route diverges from the current node. We'll need to split the current node.
+
+	// As an optimization, if the split would result in a new node whose children represent a complete subtrie, we
+	// just update the current node, instead of allocating new nodes and optimizing them away immediately after.
+	if n.isLeaf() &&
+		curNodeBitsLen == remainingRouteBitsLen &&
+		commonPrefixLen(n.bits, remainingRouteBits) == len(n.bits)-1 {
+		n.bits = n.bits[:len(n.bits)-1]
+		n.children = nil
+		return true
+	}
+
+	*parent = splitNodeForRoute(n, remainingRouteBits)
+	return n.maybeRemoveRedundantChildren()
+}
+
+func commonPrefixLen(a, b bitslice.BitSlice) int {
+	i := 0
+	maxLen := min(len(a), len(b))
+	for ; i < maxLen; i++ {
+		if a[i] != b[i] {
+			break
+		}
+	}
+
+	return i
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+
+	return b
 }
 
 func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) *node {
@@ -135,43 +132,24 @@ func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) *node {
 	return newNode
 }
 
-// A completed subtrie is a node in the trie whose children when taken together represent the complete subtrie below the
-// node. For example, if a node represented the route "00", and it had a child for "0" and a child for "1", the node
-// would be representing the "000" and "001" routes. But that's the same as having a single node for "00".
-// simplifyCompletedSubtries takes a stack of visited nodes and simplifies completed subtries as far down the stack as
-// possible. If at any point in the stack we find a node representing an incomplete subtrie, we stop.
-func simplifyVisitedSubtries(visited []*node) {
-	for i := len(visited) - 1; i >= 0; i-- {
-		if visited[i].isLeaf() {
-			return
-		}
-
-		if !visited[i].childrenAreCompleteSubtrie() {
-			return
-		}
-
-		visited[i].children = nil
-	}
-}
-
-func commonPrefixLen(a, b bitslice.BitSlice) int {
-	i := 0
-	maxLen := min(len(a), len(b))
-	for ; i < maxLen; i++ {
-		if a[i] != b[i] {
-			break
-		}
+// A node's children are redundant if they, taken together, represent a complete subtrie from the
+// node's perspective. This situation can be represented more simply as the node having a nil
+// children pointer.
+func (n *node) maybeRemoveRedundantChildren() bool {
+	if n.isLeaf() {
+		return false
 	}
 
-	return i
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
+	if !n.children[0].isLeaf() || !n.children[1].isLeaf() {
+		return false
 	}
 
-	return b
+	if len(n.children[0].bits) != 1 || len(n.children[1].bits) != 1 {
+		return false
+	}
+
+	n.children = nil
+	return true
 }
 
 type traversalStep struct {
