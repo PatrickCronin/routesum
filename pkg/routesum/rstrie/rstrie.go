@@ -42,7 +42,7 @@ func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
 	}
 
 	// Otherwise, perform a non-recursive search of the trie's nodes for the best place to insert the route, and do so.
-	visited := []*node{}
+	visited := make([]*node, 0, 128)
 	curNode := t.root
 	remainingRouteBits := routeBits
 
