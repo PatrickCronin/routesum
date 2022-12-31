@@ -52,7 +52,7 @@ func main() {
 	}
 }
 
-func summarize(
+func summarize( //nolint: funlen
 	in io.Reader,
 	out, memStatsOut, cpuProfOut io.Writer,
 	memProfOut io.WriteCloser,
@@ -64,7 +64,7 @@ func summarize(
 		defer pprof.StopCPUProfile()
 	}
 
-	rs := routesum.NewRouteSum()
+	rs := routesum.New()
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		line := bytes.TrimSpace(scanner.Bytes())
@@ -103,7 +103,12 @@ Total size of data structure: %d
 		)
 	}
 
-	for _, s := range rs.SummaryStrings() {
+	strs, err := rs.SummaryStrings()
+	if err != nil {
+		return err //nolint: wrapcheck
+	}
+
+	for _, s := range strs {
 		if _, err := out.Write([]byte(s + "\n")); err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}
