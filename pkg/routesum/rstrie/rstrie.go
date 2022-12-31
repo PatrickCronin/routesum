@@ -57,7 +57,7 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 	if remainingRouteBitsLen <= curNodeBitsLen && bytes.HasPrefix(n.bits, remainingRouteBits) {
 		n.bits = remainingRouteBits
 		n.children = nil
-		return false
+		return true
 	}
 
 	if curNodeBitsLen <= remainingRouteBitsLen && bytes.HasPrefix(remainingRouteBits, n.bits) {

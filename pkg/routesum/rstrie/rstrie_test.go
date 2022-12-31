@@ -145,6 +145,18 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				children: nil,
 			}},
 		},
+		{
+			name: "completed subtries are simplified when new route covers current",
+			routes: []bitslice.BitSlice{
+				{0, 0},
+				{0, 1, 1},
+				{0, 1},
+			},
+			expected: &RSTrie{root: &node{
+				bits:     bitslice.BitSlice{0},
+				children: nil,
+			}},
+		},
 	}
 
 	for _, test := range tests {
