@@ -456,7 +456,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 	}
 }
 
-func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
+func TestMemUsage(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name                     string
 		entries                  []string
@@ -473,7 +473,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 			entries: []string{
 				"192.0.2.1",
 			},
-			expectedNumInternalNodes: 0,
+			expectedNumInternalNodes: 32,
 			expectedNumLeafNodes:     1,
 		},
 		{
@@ -482,7 +482,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 				"192.0.2.1",
 				"192.0.2.0",
 			},
-			expectedNumInternalNodes: 0,
+			expectedNumInternalNodes: 31,
 			expectedNumLeafNodes:     1,
 		},
 		{
@@ -491,7 +491,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 				"192.0.2.1",
 				"192.0.2.2",
 			},
-			expectedNumInternalNodes: 1,
+			expectedNumInternalNodes: 33,
 			expectedNumLeafNodes:     2,
 		},
 		{
@@ -499,7 +499,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 			entries: []string{
 				"2001:db8::1",
 			},
-			expectedNumInternalNodes: 0,
+			expectedNumInternalNodes: 128,
 			expectedNumLeafNodes:     1,
 		},
 		{
@@ -508,7 +508,7 @@ func TestRSTrieMemUsage(t *testing.T) { //nolint: funlen
 				"192.0.2.0",
 				"2001:db8::1",
 			},
-			expectedNumInternalNodes: 0,
+			expectedNumInternalNodes: 160,
 			expectedNumLeafNodes:     2,
 		},
 	}
