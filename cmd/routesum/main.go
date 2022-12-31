@@ -17,11 +17,6 @@ import (
 func main() {
 	cpuProfile := flag.String("cpuprofile", "", "write cpu profile to file")
 	memProfile := flag.String("memprofile", "", "write mem profile to file")
-	showMemStats := flag.Bool(
-		"show-mem-stats",
-		false,
-		"Whether or not to write memory usage stats to STDERR. (This functionity requires the use of `unsafe`, so may not be perfect.)", //nolint: lll
-	)
 	flag.Parse()
 
 	var cpuProfOut io.Writer
@@ -41,12 +36,7 @@ func main() {
 		}
 	}
 
-	var memStatsOut io.Writer
-	if *showMemStats {
-		memStatsOut = os.Stderr
-	}
-
-	if err := summarize(os.Stdin, os.Stdout, memStatsOut, cpuProfOut, memProfOut); err != nil {
+	if err := summarize(os.Stdin, os.Stdout, cpuProfOut, memProfOut); err != nil {
 		fmt.Fprintf(os.Stderr, "summarize: %s\n", err.Error())
 		os.Exit(1)
 	}
@@ -54,7 +44,7 @@ func main() {
 
 func summarize(
 	in io.Reader,
-	out, memStatsOut, cpuProfOut io.Writer,
+	out, cpuProfOut io.Writer,
 	memProfOut io.WriteCloser,
 ) error {
 	if cpuProfOut != nil {
@@ -84,23 +74,6 @@ func summarize(
 		if err := memProfOut.Close(); err != nil {
 			return errors.Wrap(err, "close mem profile")
 		}
-	}
-
-	if memStatsOut != nil {
-		numInternalNodes, numLeafNodes, internalNodesTotalSize, leafNodesTotalSize := rs.MemUsage()
-		fmt.Fprintf(memStatsOut,
-			`Num internal nodes:           %d
-Num leaf nodes:               %d
-Size of all internal nodes:   %d
-Size of all leaf nodes:       %d
-Total size of data structure: %d
-`,
-			numInternalNodes,
-			numLeafNodes,
-			internalNodesTotalSize,
-			leafNodesTotalSize,
-			internalNodesTotalSize+leafNodesTotalSize,
-		)
 	}
 
 	for _, s := range rs.SummaryStrings() {
