@@ -13,7 +13,7 @@ func TestSummarize(t *testing.T) {
 	in := strings.NewReader(inStr)
 	var out strings.Builder
 
-	err := summarize(in, &out)
+	err := summarize(in, &out, nil, nil)
 	require.NoError(t, err, "summarize does not throw an error")
 
 	assert.Equal(t, "192.0.2.0/31\n", out.String(), "read expected output")
