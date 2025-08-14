@@ -1,61 +1,76 @@
+version = '2'
+
 [run]
-  deadline = "1m"
-  tests = true
+tests = true
 
 [linters]
-  disable-all = true
-  enable = [
-    "asciicheck",
-    "dogsled",
-    "errcheck",
-    "errorlint",
-    "exhaustive",
-    "exhaustruct",
-    "exportloopref",
-    "funlen",
-    "gochecknoglobals",
-    "goconst",
-    "gocyclo",
-    "gocritic",
-    "goerr113",
-    "gofumpt",
-    "goimports",
-    "gosec",
-    "gosimple",
-    "govet",
-    "ineffassign",
-    "lll",
-    "misspell",
-    "nakedret",
-    "nolintlint",
-    "prealloc",
-    "revive",
-    "staticcheck",
-    "stylecheck",
-    "typecheck",
-    "unconvert",
-    "unparam",
-    "unused",
-    "vetshadow",
-    "wrapcheck",
-  ]
+default = 'none'
+enable = [
+  'asciicheck',
+  'dogsled',
+  'err113',
+  'errcheck',
+  'errorlint',
+  'exhaustive',
+  'exhaustruct',
+  'funlen',
+  'gochecknoglobals',
+  'goconst',
+  'gocritic',
+  'gocyclo',
+  'gosec',
+  'govet',
+  'ineffassign',
+  'lll',
+  'misspell',
+  'nakedret',
+  'nolintlint',
+  'prealloc',
+  'revive',
+  'staticcheck',
+  'unconvert',
+  'unparam',
+  'unused',
+  'wrapcheck'
+]
 
-[linters-settings.exhaustive]
-  default-signifies-exhaustive = true
+[linters.settings]
+[linters.settings.exhaustive]
+default-signifies-exhaustive = true
 
-[linters-settings.gofumpt]
-  extra-rules = true
+[linters.settings.lll]
+line-length = 120
+tab-width = 4
 
-[linters-settings.lll]
-  line-length = 120
-  tab-width = 4
+[linters.exclusions]
+generated = 'lax'
+paths = [
+  'third_party$',
+  'builtin$',
+  'examples$'
+]
 
-[issues]
-  exclude-use-default = false
+[[linters.exclusions.rules]]
+linters = [
+  'gosec'
+]
+# G306 - "Expect WriteFile permissions to be 0600 or less".
+text = 'G306'
 
-  [[issues.exclude-rules]]
-  linters = [
-    "gosec"
-  ]
-  # G306 - "Expect WriteFile permissions to be 0600 or less".
-  text = "G306"
+[formatters]
+enable = [
+  'gofumpt',
+  'goimports'
+]
+
+[formatters.settings]
+[formatters.settings.gofumpt]
+extra-rules = true
+
+[formatters.exclusions]
+generated = 'lax'
+paths = [
+  'third_party$',
+  'builtin$',
+  'examples$'
+]
