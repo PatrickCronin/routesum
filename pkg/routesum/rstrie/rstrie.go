@@ -103,14 +103,6 @@ func commonPrefixLen(a, b bitslice.BitSlice) int {
 	return i
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-
-	return b
-}
-
 func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) *node {
 	commonBitsLen := commonPrefixLen(oldNode.bits, routeBits)
 	commonBits := oldNode.bits[:commonBitsLen]
