@@ -9,7 +9,6 @@ import (
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 	"github.com/PatrickCronin/routesum/pkg/routesum/rstrie"
 	"github.com/pkg/errors"
-	"inet.af/netaddr"
 )
 
 // RouteSum has methods supporting route summarization of networks and hosts
@@ -109,8 +108,8 @@ func (rs *RouteSum) SummaryStrings() []string {
 		if len(bits) == 8*4 {
 			strs = append(strs, ip.String())
 		} else {
-			ipPrefix := netaddr.IPPrefixFrom(ip, uint8(len(bits)))
-			strs = append(strs, ipPrefix.String())
+			prefix := netip.PrefixFrom(ip, len(bits))
+			strs = append(strs, prefix.String())
 		}
 	}
 
@@ -121,24 +120,24 @@ func (rs *RouteSum) SummaryStrings() []string {
 		if len(bits) == 8*16 {
 			strs = append(strs, ip.String())
 		} else {
-			ipPrefix := netaddr.IPPrefixFrom(ip, uint8(len(bits)))
-			strs = append(strs, ipPrefix.String())
+			prefix := netip.PrefixFrom(ip, len(bits))
+			strs = append(strs, prefix.String())
 		}
 	}
 
 	return strs
 }
 
-func ipv4FromBits(bits bitslice.BitSlice) netaddr.IP {
+func ipv4FromBits(bits bitslice.BitSlice) netip.Addr {
 	bytes := bits.ToBytes(4)
 	byteArray := [4]byte{}
 	copy(byteArray[:], bytes[0:4])
-	return netaddr.IPFrom4(byteArray)
+	return netip.AddrFrom4(byteArray)
 }
 
-func ipv6FromBits(bits bitslice.BitSlice) netaddr.IP {
+func ipv6FromBits(bits bitslice.BitSlice) netip.Addr {
 	bytes := bits.ToBytes(16)
 	byteArray := [16]byte{}
 	copy(byteArray[:], bytes[0:16])
-	return netaddr.IPv6Raw(byteArray)
+	return netip.AddrFrom16(byteArray)
 }
