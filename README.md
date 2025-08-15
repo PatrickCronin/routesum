@@ -65,15 +65,6 @@ Comments, questions or suggestions for improvements are welcome on our
 
 # Command-Line Program
 
-## Usage
-
-```bash
-$ routesum -h
-Usage of routesum:
-  -show-mem-stats
-        Whether or not to write memory usage stats to STDERR.
-```
-
 ## Description
 
 `routesum` is a well-behaved CLI citizen. It takes input from STDIN, and outputs
