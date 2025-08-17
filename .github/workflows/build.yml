@@ -12,19 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.18.x', '1.19.x']
+        go-version: ['1.24.x', '1.23.x']
         include:
-          - go-version: '1.19.x'
+          - go-version: '1.24.x'
             build-coverage: true
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
+        uses: actions/checkout@v5
 
       - name: Get dependencies
         run: |
@@ -41,14 +41,14 @@ jobs:
         run: ${{ format('go test -race -coverprofile=cover.{0}.gcov -covermode=atomic ./...', matrix.go-version) }}
 
       - name: Convert coverage output to lcov
-        uses: jandelgado/gcov2lcov-action@v1.0.5
+        uses: jandelgado/gcov2lcov-action@v1
         with:
           infile: ${{ format('cover.{0}.gcov', matrix.go-version) }}
           outfile: ${{ format('cover.{0}.lcov', matrix.go-version) }}
         if: matrix.build-coverage && success()
 
       - name: Upload coverage
-        uses: coverallsapp/github-action@v1.1.1
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ format('cover.{0}.lcov', matrix.go-version) }}
