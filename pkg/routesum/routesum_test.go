@@ -70,8 +70,8 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			expected: []string{
 				"192.0.2.0",
 				"198.51.100.0/24",
-				"::ffff:c000:200",
-				"::ffff:c633:6400/120",
+				"::ffff:192.0.2.0",
+				"::ffff:198.51.100.0/120",
 				"2001:db8::",
 				"2001:db8:1::/48",
 			},
@@ -88,7 +88,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
@@ -140,8 +140,8 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			expected: []string{
 				"192.0.2.0",
 				"198.51.100.0/31",
-				"::ffff:c000:200",
-				"::ffff:c633:6400/127",
+				"::ffff:192.0.2.0",
+				"::ffff:198.51.100.0/127",
 				"2001:db8::",
 				"2001:db8::1:0/127",
 			},
@@ -158,7 +158,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/26",
-				"::ffff:c000:200/120",
+				"::ffff:192.0.2.0/120",
 				"2001:db8::/120",
 			},
 		},
@@ -174,7 +174,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:c000:200/127",
+				"::ffff:192.0.2.0/127",
 				"2001:db8::/127",
 			},
 		},
@@ -196,7 +196,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/30",
-				"::ffff:c000:200/126",
+				"::ffff:192.0.2.0/126",
 				"2001:db8::/126",
 			},
 		},
@@ -321,7 +321,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/24",
-				"::ffff:c000:200/120",
+				"::ffff:192.0.2.0/120",
 				"2001:db8::/32",
 			},
 		},
@@ -360,12 +360,12 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 				"198.51.100.2/31",
 				"198.51.100.4/30",
 				"198.51.100.8/31",
-				"::ffff:c000:201",
-				"::ffff:c000:202/127",
-				"::ffff:c000:204",
-				"::ffff:c633:6402/127",
-				"::ffff:c633:6404/126",
-				"::ffff:c633:6408/127",
+				"::ffff:192.0.2.1",
+				"::ffff:192.0.2.2/127",
+				"::ffff:192.0.2.4",
+				"::ffff:198.51.100.2/127",
+				"::ffff:198.51.100.4/126",
+				"::ffff:198.51.100.8/127",
 				"2001:db8::1",
 				"2001:db8::2/127",
 				"2001:db8::4",
@@ -389,7 +389,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0/31",
-				"::ffff:c000:200/127",
+				"::ffff:192.0.2.0/127",
 				"2001:db8::/127",
 			},
 		},
@@ -399,7 +399,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 				"::ffff:192.0.2.0",
 			},
 			expected: []string{
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 			},
 		},
 		{
@@ -410,7 +410,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 			},
 		},
 		{
@@ -422,7 +422,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
@@ -438,7 +438,7 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 			},
 			expected: []string{
 				"192.0.2.0",
-				"::ffff:c000:200",
+				"::ffff:192.0.2.0",
 				"2001:db8::",
 			},
 		},
