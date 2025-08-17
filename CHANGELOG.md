@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.3.0 (2025-08-17)
+
+* Replace inet.af with net/netip, which removes the `unsafe` dependency
+* Output of IPv4-embedded IPv6 networks now uses the convenience form, e.g.
+  ::ffff:192.0.2.0 instead of ::ffff:c000:200.
+
 ## 0.2.0 (2021-10-19)
 
 * Create a much more performant implementation

@@ -200,7 +200,7 @@ tracker](https://github.com/PatrickCronin/routesum/issues).
 
 # Copyright and License
 
-This software is Copyright (c) 2020-2021 by Patrick Cronin.
+This software is Copyright (c) 2020-2025 by Patrick Cronin.
 
 This is free software, licensed under the terms of the [MIT
 License](https://github.com/PatrickCronin/routesum/LICENSE.md).
