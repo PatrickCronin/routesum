@@ -2,10 +2,9 @@
 package rstrie
 
 import (
-	"bytes"
 	"container/list"
 
-	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
+	"github.com/PatrickCronin/routesum/pkg/routesum/bitvector"
 )
 
 // RSTrie is a radix-like trie of radix 2 whose stored "words" are the binary representations of networks and IPs. An
@@ -17,7 +16,7 @@ type RSTrie struct {
 
 type node struct {
 	children *[2]*node
-	bits     bitslice.BitSlice
+	bits     bitvector.BitVector
 }
 
 // NewRSTrie returns an initialized RSTrie for use
@@ -27,11 +26,11 @@ func NewRSTrie() *RSTrie {
 	}
 }
 
-// InsertRoute inserts a new BitSlice into the trie. Each insert results in a space-optimized trie structure
+// InsertRoute inserts a new BitVector into the trie. Each insert results in a space-optimized trie structure
 // representing its contents. If a route being inserted is already covered by an existing route, it's simply ignored. If
 // a route being inserted covers one or more routes already in the trie, those nodes are removed and replaced by the new
 // route.
-func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
+func (t *RSTrie) InsertRoute(routeBits bitvector.BitVector) {
 	// If the trie has no root node, simply create one to store the new route
 	if t.root == nil {
 		t.root = &node{
@@ -49,26 +48,29 @@ func (n *node) isLeaf() bool {
 }
 
 // parent is a **node so that we can change what the parent is pointing to if we need to!
-func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) bool {
-	remainingRouteBitsLen := len(remainingRouteBits)
-	curNodeBitsLen := len(n.bits)
+func (n *node) insertRoute(parent **node, remainingRouteBits bitvector.BitVector) bool {
+	remainingRouteBitsLen := remainingRouteBits.Len()
+	curNodeBitsLen := n.bits.Len()
 
 	// Does the requested route cover the current node? If so, update the current node.
-	if remainingRouteBitsLen <= curNodeBitsLen && bytes.HasPrefix(n.bits, remainingRouteBits) {
+	if remainingRouteBitsLen <= curNodeBitsLen && n.bits.HasPrefix(remainingRouteBits) {
 		n.bits = remainingRouteBits
 		n.children = nil
 		return true
 	}
 
-	if curNodeBitsLen <= remainingRouteBitsLen && bytes.HasPrefix(remainingRouteBits, n.bits) {
+	if curNodeBitsLen <= remainingRouteBitsLen && remainingRouteBits.HasPrefix(n.bits) {
 		// Does the current node cover the requested route? If so, we're done.
 		if n.isLeaf() {
 			return false
 		}
 
 		// Otherwise, we traverse to the correct child.
-		whichChild := remainingRouteBits[curNodeBitsLen]
-		if n.children[whichChild].insertRoute(&n.children[whichChild], remainingRouteBits[curNodeBitsLen:]) {
+		whichChild := remainingRouteBits.At(curNodeBitsLen)
+		if n.children[whichChild].insertRoute(
+			&n.children[whichChild],
+			remainingRouteBits.SliceFrom(curNodeBitsLen),
+		) {
 			return n.maybeRemoveRedundantChildren()
 		}
 
@@ -81,8 +83,8 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 	// just update the current node, instead of allocating new nodes and optimizing them away immediately after.
 	if n.isLeaf() &&
 		curNodeBitsLen == remainingRouteBitsLen &&
-		commonPrefixLen(n.bits, remainingRouteBits) == len(n.bits)-1 {
-		n.bits = n.bits[:len(n.bits)-1]
+		n.bits.CommonPrefixLen(remainingRouteBits) == n.bits.Len()-1 {
+		n.bits = n.bits.Prefix(n.bits.Len() - 1)
 		n.children = nil
 		return true
 	}
@@ -91,34 +93,21 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 	return n.maybeRemoveRedundantChildren()
 }
 
-func commonPrefixLen(a, b bitslice.BitSlice) int {
-	i := 0
-	maxLen := min(len(a), len(b))
-	for ; i < maxLen; i++ {
-		if a[i] != b[i] {
-			break
-		}
-	}
-
-	return i
-}
-
-func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) *node {
-	commonBitsLen := commonPrefixLen(oldNode.bits, routeBits)
-	commonBits := oldNode.bits[:commonBitsLen]
-
+func splitNodeForRoute(oldNode *node, routeBits bitvector.BitVector) *node {
+	commonBitsLen := oldNode.bits.CommonPrefixLen(routeBits)
+	commonBits := oldNode.bits.Prefix(commonBitsLen)
 	routeNode := &node{
-		bits:     routeBits[commonBitsLen:],
+		bits:     routeBits.SliceFrom(commonBitsLen),
 		children: nil,
 	}
-	oldNode.bits = oldNode.bits[commonBitsLen:]
+	oldNode.bits = oldNode.bits.SliceFrom(commonBitsLen)
 
 	newNode := &node{
 		bits:     commonBits,
 		children: &[2]*node{},
 	}
-	newNode.children[routeNode.bits[0]] = routeNode
-	newNode.children[oldNode.bits[0]] = oldNode
+	newNode.children[routeNode.bits.At(0)] = routeNode
+	newNode.children[oldNode.bits.At(0)] = oldNode
 
 	return newNode
 }
@@ -135,7 +124,7 @@ func (n *node) maybeRemoveRedundantChildren() bool {
 		return false
 	}
 
-	if len(n.children[0].bits) != 1 || len(n.children[1].bits) != 1 {
+	if n.children[0].bits.Len() != 1 || n.children[1].bits.Len() != 1 {
 		return false
 	}
 
@@ -145,30 +134,28 @@ func (n *node) maybeRemoveRedundantChildren() bool {
 
 type traversalStep struct {
 	n                  *node
-	precedingRouteBits bitslice.BitSlice
+	precedingRouteBits bitvector.BitVector
 }
 
 // Contents returns the BitSlices contained in the RSTrie.
-func (t *RSTrie) Contents() []bitslice.BitSlice {
+func (t *RSTrie) Contents() []bitvector.BitVector {
 	// If the trie is empty
 	if t.root == nil {
-		return []bitslice.BitSlice{}
+		return []bitvector.BitVector{}
 	}
 
 	// Otherwise
 	remainingSteps := list.New()
 	remainingSteps.PushFront(traversalStep{
 		n:                  t.root,
-		precedingRouteBits: bitslice.BitSlice{},
+		precedingRouteBits: bitvector.BitVector{},
 	})
 
-	contents := []bitslice.BitSlice{}
+	contents := []bitvector.BitVector{}
 	for remainingSteps.Len() > 0 {
 		step := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
 
-		stepRouteBits := bitslice.BitSlice{}
-		stepRouteBits = append(stepRouteBits, step.precedingRouteBits...)
-		stepRouteBits = append(stepRouteBits, step.n.bits...)
+		stepRouteBits := step.precedingRouteBits.Append(step.n.bits)
 
 		if step.n.isLeaf() {
 			contents = append(contents, stepRouteBits)
