@@ -6,6 +6,7 @@ import (
 	"container/list"
 	"iter"
 	"slices"
+	"sync"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 )
@@ -14,6 +15,7 @@ import (
 // optimization rstrie makes over a generic radix tree is that since routes covered by other routes don't need to be
 // stored, each node in the trie will have either 0 or 2 children; never 1.
 type RSTrie struct {
+	mu   sync.RWMutex
 	root *node
 }
 
@@ -25,6 +27,7 @@ type node struct {
 // NewRSTrie returns an initialized RSTrie for use
 func NewRSTrie() *RSTrie {
 	return &RSTrie{
+		mu:   sync.RWMutex{},
 		root: nil,
 	}
 }
@@ -34,6 +37,9 @@ func NewRSTrie() *RSTrie {
 // a route being inserted covers one or more routes already in the trie, those nodes are removed and replaced by the new
 // route.
 func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	// If the trie has no root node, simply create one to store the new route
 	if t.root == nil {
 		t.root = &node{
@@ -153,12 +159,18 @@ type traversalStep struct {
 // Contents returns the BitSlices contained in the RSTrie.
 // Deprecated: Each() is preferred.
 func (t *RSTrie) Contents() []bitslice.BitSlice {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	return slices.Collect(t.Each())
 }
 
 // Each returns Navigate the trie and return each complete bitslice.
 func (t *RSTrie) Each() iter.Seq[bitslice.BitSlice] {
 	return func(yield func(bitslice.BitSlice) bool) {
+		t.mu.RLock()
+		defer t.mu.RUnlock()
+
 		if t.root == nil {
 			return
 		}
