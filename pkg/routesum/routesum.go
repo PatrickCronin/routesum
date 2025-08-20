@@ -101,8 +101,7 @@ func ipBitsForIP(ip netip.Addr) (bitslice.BitSlice, error) {
 func (rs *RouteSum) SummaryStrings() []string {
 	strs := []string{}
 
-	ipv4BitSlices := rs.ipv4.Contents()
-	for _, bits := range ipv4BitSlices {
+	for bits := range rs.ipv4.Each() {
 		ip := ipv4FromBits(bits)
 
 		if len(bits) == 8*4 {
@@ -113,8 +112,7 @@ func (rs *RouteSum) SummaryStrings() []string {
 		}
 	}
 
-	ipv6BitSlices := rs.ipv6.Contents()
-	for _, bits := range ipv6BitSlices {
+	for bits := range rs.ipv6.Each() {
 		ip := ipv6FromBits(bits)
 
 		if len(bits) == 8*16 {

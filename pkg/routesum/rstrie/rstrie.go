@@ -4,6 +4,8 @@ package rstrie
 import (
 	"bytes"
 	"container/list"
+	"iter"
+	"slices"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 )
@@ -149,40 +151,45 @@ type traversalStep struct {
 }
 
 // Contents returns the BitSlices contained in the RSTrie.
+// Deprecated: Each() is preferred.
 func (t *RSTrie) Contents() []bitslice.BitSlice {
-	// If the trie is empty
-	if t.root == nil {
-		return []bitslice.BitSlice{}
-	}
+	return slices.Collect(t.Each())
+}
 
-	// Otherwise
-	remainingSteps := list.New()
-	remainingSteps.PushFront(traversalStep{
-		n:                  t.root,
-		precedingRouteBits: bitslice.BitSlice{},
-	})
+// Each returns Navigate the trie and return each complete bitslice.
+func (t *RSTrie) Each() iter.Seq[bitslice.BitSlice] {
+	return func(yield func(bitslice.BitSlice) bool) {
+		if t.root == nil {
+			return
+		}
 
-	contents := []bitslice.BitSlice{}
-	for remainingSteps.Len() > 0 {
-		step := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
+		remainingSteps := list.New()
+		remainingSteps.PushFront(traversalStep{
+			n:                  t.root,
+			precedingRouteBits: bitslice.BitSlice{},
+		})
 
-		stepRouteBits := bitslice.BitSlice{}
-		stepRouteBits = append(stepRouteBits, step.precedingRouteBits...)
-		stepRouteBits = append(stepRouteBits, step.n.bits...)
+		for remainingSteps.Len() > 0 {
+			step := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
 
-		if step.n.isLeaf() {
-			contents = append(contents, stepRouteBits)
-		} else {
-			remainingSteps.PushFront(traversalStep{
-				n:                  step.n.children[1],
-				precedingRouteBits: stepRouteBits,
-			})
-			remainingSteps.PushFront(traversalStep{
-				n:                  step.n.children[0],
-				precedingRouteBits: stepRouteBits,
-			})
+			stepRouteBits := bitslice.BitSlice{}
+			stepRouteBits = append(stepRouteBits, step.precedingRouteBits...)
+			stepRouteBits = append(stepRouteBits, step.n.bits...)
+
+			if step.n.isLeaf() {
+				if !yield(stepRouteBits) {
+					return
+				}
+			} else {
+				remainingSteps.PushFront(traversalStep{
+					n:                  step.n.children[1],
+					precedingRouteBits: stepRouteBits,
+				})
+				remainingSteps.PushFront(traversalStep{
+					n:                  step.n.children[0],
+					precedingRouteBits: stepRouteBits,
+				})
+			}
 		}
 	}
-
-	return contents
 }
