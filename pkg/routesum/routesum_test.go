@@ -26,7 +26,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidIPErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+			assert.Equal(t, []string(nil), rs.SummaryStrings(), "nothing was added")
 		})
 	}
 
@@ -48,7 +48,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidNetErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+			assert.Equal(t, []string(nil), rs.SummaryStrings(), "nothing was added")
 		})
 	}
 
