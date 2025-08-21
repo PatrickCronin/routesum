@@ -26,7 +26,10 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidIPErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+			assert.Equal(t, []string{}, strs, "nothing was added")
 		})
 	}
 
@@ -48,7 +51,11 @@ func TestStrings(t *testing.T) { //nolint: funlen
 			if assert.Error(t, err) {
 				assert.Regexp(t, invalidNetErr, err.Error())
 			}
-			assert.Equal(t, []string{}, rs.SummaryStrings(), "nothing was added")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+
+			assert.Equal(t, []string{}, strs, "nothing was added")
 		})
 	}
 
@@ -110,7 +117,11 @@ func TestStrings(t *testing.T) { //nolint: funlen
 				err := rs.InsertFromString(str)
 				require.NoError(t, err)
 			}
-			assert.Equal(t, test.expected, rs.SummaryStrings(), "summarized as expected")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expected, strs, "summarized as expected")
 		})
 	}
 }
@@ -451,7 +462,11 @@ func TestSummarize(t *testing.T) { //nolint: funlen
 				err := rs.InsertFromString(str)
 				require.NoError(t, err)
 			}
-			assert.Equal(t, test.expected, rs.SummaryStrings(), "got expected summary")
+
+			strs, err := rs.SummaryStrings()
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expected, strs, "got expected summary")
 		})
 	}
 }

@@ -32,7 +32,12 @@ func summarize(in io.Reader, out io.Writer) error {
 		}
 	}
 
-	for _, s := range rs.SummaryStrings() {
+	strs, err := rs.SummaryStrings()
+	if err != nil {
+		return fmt.Errorf("get strings: %w", err)
+	}
+
+	for _, s := range strs {
 		if _, err := out.Write([]byte(s + "\n")); err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}

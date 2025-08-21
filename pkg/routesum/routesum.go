@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
+	"github.com/PatrickCronin/routesum/pkg/routesum/bitvector"
 	"github.com/PatrickCronin/routesum/pkg/routesum/rstrie"
 	"github.com/pkg/errors"
 )
@@ -28,22 +28,22 @@ func NewRouteSum() *RouteSum {
 // InsertFromString adds either a string-formatted network or IP to the summary
 func (rs *RouteSum) InsertFromString(s string) error {
 	var ip netip.Addr
-	var ipBits bitslice.BitSlice
+	var bv bitvector.BitVector
 	var err error
 
 	if strings.Contains(s, "/") {
-		ipPrefix, err := netip.ParsePrefix(s)
+		prefix, err := netip.ParsePrefix(s)
 		if err != nil {
 			return fmt.Errorf("parse network: %w", err)
 		}
-		if !ipPrefix.IsValid() {
+		if !prefix.IsValid() {
 			return errors.Errorf("%s is not valid CIDR", s)
 		}
 
-		ip = ipPrefix.Addr()
-		ipBits, err = ipBitsForIPPrefix(ipPrefix)
+		ip = prefix.Addr()
+		bv, err = bitvector.NewFromPrefix(prefix)
 		if err != nil {
-			return err
+			return fmt.Errorf("convert to bits: %w", err)
 		}
 	} else {
 		ip, err = netip.ParseAddr(s)
@@ -54,90 +54,62 @@ func (rs *RouteSum) InsertFromString(s string) error {
 			return errors.Errorf("%s is not a valid IP", s)
 		}
 
-		ipBits, err = ipBitsForIP(ip)
+		bv, err = bitvector.NewFromIP(ip)
 		if err != nil {
-			return err
+			return fmt.Errorf("convert to bits: %w", err)
 		}
 	}
 
 	if ip.Is4() {
-		rs.ipv4.InsertRoute(ipBits)
+		rs.ipv4.InsertRoute(bv)
 	} else {
-		rs.ipv6.InsertRoute(ipBits)
+		rs.ipv6.InsertRoute(bv)
 	}
 
 	return nil
 }
 
-func ipBitsForIPPrefix(ipPrefix netip.Prefix) (bitslice.BitSlice, error) {
-	ipBytes, err := ipPrefix.Addr().MarshalBinary()
-	if err != nil {
-		return nil, errors.Wrapf(err, "express %s as bytes", ipPrefix.Addr().String())
-	}
-
-	ipBits, err := bitslice.NewFromBytes(ipBytes)
-	if err != nil {
-		return nil, fmt.Errorf("express %s as bits: %w", ipPrefix.Addr().String(), err)
-	}
-
-	return ipBits[:ipPrefix.Bits()], nil
-}
-
-func ipBitsForIP(ip netip.Addr) (bitslice.BitSlice, error) {
-	ipBytes, err := ip.MarshalBinary()
-	if err != nil {
-		return nil, errors.Wrapf(err, "express %s as bytes", ip.String())
-	}
-
-	ipBits, err := bitslice.NewFromBytes(ipBytes)
-	if err != nil {
-		return nil, fmt.Errorf("express %s as bits: %w", ip.String(), err)
-	}
-
-	return ipBits, nil
-}
-
 // SummaryStrings returns a summary of all received routes as a string slice.
-func (rs *RouteSum) SummaryStrings() []string {
+func (rs *RouteSum) SummaryStrings() ([]string, error) {
 	strs := []string{}
 
-	ipv4BitSlices := rs.ipv4.Contents()
-	for _, bits := range ipv4BitSlices {
-		ip := ipv4FromBits(bits)
+	ipv4BitVectors := rs.ipv4.Contents()
+	for _, bv := range ipv4BitVectors {
+		if bv.Len() == 32 {
+			ip, err := bv.ToIP(4)
+			if err != nil {
+				return nil, fmt.Errorf("convert to IP: %w", err)
+			}
 
-		if len(bits) == 8*4 {
 			strs = append(strs, ip.String())
 		} else {
-			prefix := netip.PrefixFrom(ip, len(bits))
+			prefix, err := bv.ToPrefix(4)
+			if err != nil {
+				return nil, fmt.Errorf("convert to prefix: %w", err)
+			}
+
 			strs = append(strs, prefix.String())
 		}
 	}
 
-	ipv6BitSlices := rs.ipv6.Contents()
-	for _, bits := range ipv6BitSlices {
-		ip := ipv6FromBits(bits)
+	ipv6BitVectors := rs.ipv6.Contents()
+	for _, bv := range ipv6BitVectors {
+		if bv.Len() == 128 {
+			ip, err := bv.ToIP(16)
+			if err != nil {
+				return nil, fmt.Errorf("convert to IP: %w", err)
+			}
 
-		if len(bits) == 8*16 {
 			strs = append(strs, ip.String())
 		} else {
-			prefix := netip.PrefixFrom(ip, len(bits))
+			prefix, err := bv.ToPrefix(16)
+			if err != nil {
+				return nil, fmt.Errorf("convert to prefix: %w", err)
+			}
+
 			strs = append(strs, prefix.String())
 		}
 	}
 
-	return strs
-}
-
-func ipv4FromBits(bits bitslice.BitSlice) netip.Addr {
-	bytes := bits.ToBytes(4)
-	byteArray := [4]byte{}
-	copy(byteArray[:], bytes[0:4])
-	return netip.AddrFrom4(byteArray)
-}
-
-func ipv6FromBits(bits bitslice.BitSlice) netip.Addr {
-	bytes := bits.ToBytes(16)
-	byteArray := [16]byte{}
-	copy(byteArray[:], bytes[0:16])
-	return netip.AddrFrom16(byteArray)
+	return strs, nil
 }

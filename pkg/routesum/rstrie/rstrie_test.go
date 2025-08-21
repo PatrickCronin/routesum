@@ -3,109 +3,83 @@ package rstrie
 import (
 	"testing"
 
-	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
+	"github.com/PatrickCronin/routesum/pkg/routesum/bitvector"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestCommonPrefixLen(t *testing.T) {
-	tests := []struct {
-		name     string
-		a, b     bitslice.BitSlice
-		expected int
-	}{
-		{
-			name:     "differing first bit",
-			a:        bitslice.BitSlice{0},
-			b:        bitslice.BitSlice{1},
-			expected: 0,
-		},
-		{
-			name:     "differing second bit",
-			a:        bitslice.BitSlice{0, 0},
-			b:        bitslice.BitSlice{0, 1},
-			expected: 1,
-		},
-		{
-			name:     "nothing different",
-			a:        bitslice.BitSlice{0, 0, 0, 1},
-			b:        bitslice.BitSlice{0, 0, 0, 1},
-			expected: 4,
-		},
-	}
-
-	for _, test := range tests {
-		assert.Equal(
-			t,
-			test.expected,
-			commonPrefixLen(test.a, test.b),
-			test.name,
-		)
-	}
-}
 
 func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
-		routes   []bitslice.BitSlice
+		routes   []bitvector.BitVector
 		expected *RSTrie
 	}{
 		{
 			name:   "add one child",
-			routes: []bitslice.BitSlice{{0}},
+			routes: []bitvector.BitVector{bitvector.New([]byte{0x0}, 1)},
 			expected: &RSTrie{
 				root: &node{
-					bits:     bitslice.BitSlice{0},
+					bits:     bitvector.New([]byte{0x0}, 1),
 					children: nil,
 				},
 			},
 		},
 		{
 			name:   "add two children, completing the root node's subtrie",
-			routes: []bitslice.BitSlice{{0}, {1}},
+			routes: []bitvector.BitVector{bitvector.New([]byte{0x0}, 1), bitvector.New([]byte{0x80}, 1)},
 			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
+				bits:     bitvector.BitVector{},
 				children: nil,
 			}},
 		},
 		{
-			name:   "split root, root is empty",
-			routes: []bitslice.BitSlice{{0, 0}, {1, 1}},
+			name: "split root, root is empty",
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 2),
+				bitvector.New([]byte{0xc0}, 2),
+			},
 			expected: &RSTrie{
 				root: &node{
-					bits: bitslice.BitSlice{},
+					bits: bitvector.BitVector{},
 					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0, 0}},
-						1: {bits: bitslice.BitSlice{1, 1}},
+						0: {bits: bitvector.New([]byte{0x0}, 2)},
+						1: {bits: bitvector.New([]byte{0xc0}, 2)},
 					},
 				},
 			},
 		},
 		{
-			name:   "split root, root is not empty",
-			routes: []bitslice.BitSlice{{0, 0}, {0, 1, 0}},
+			name: "split root, root is not empty",
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 2),
+				bitvector.New([]byte{0x40}, 3),
+			},
 			expected: &RSTrie{
 				root: &node{
-					bits: bitslice.BitSlice{0},
+					bits: bitvector.New([]byte{0x0}, 1),
 					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
-						1: {bits: bitslice.BitSlice{1, 0}},
+						0: {bits: bitvector.New([]byte{0x0}, 1)},
+						1: {bits: bitvector.New([]byte{0x80}, 2)},
 					},
 				},
 			},
 		},
 		{
-			name:   "split root, traverse, and split internal",
-			routes: []bitslice.BitSlice{{0}, {1, 0, 0}, {1, 1, 0}},
+			name: "split root, traverse, and split internal",
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 1),
+				bitvector.New([]byte{0x80}, 3),
+				bitvector.New([]byte{0xc0}, 3),
+			},
 			expected: &RSTrie{
 				root: &node{
-					bits: bitslice.BitSlice{},
+					bits: bitvector.BitVector{},
 					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
+						0: {bits: bitvector.New([]byte{0x0}, 1)},
 						1: {
-							bits: bitslice.BitSlice{1},
+							bits: bitvector.New([]byte{0x80}, 1),
 							children: &[2]*node{
-								0: {bits: bitslice.BitSlice{0, 0}},
-								1: {bits: bitslice.BitSlice{1, 0}},
+								0: {bits: bitvector.New([]byte{0x0}, 2)},
+								1: {bits: bitvector.New([]byte{0x80}, 2)},
 							},
 						},
 					},
@@ -113,47 +87,53 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			},
 		},
 		{
-			name:   "covered routes are ignored",
-			routes: []bitslice.BitSlice{{0}, {0, 0}},
+			name: "covered routes are ignored",
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 1),
+				bitvector.New([]byte{0x0}, 2),
+			},
 			expected: &RSTrie{
 				root: &node{
-					bits:     bitslice.BitSlice{0},
+					bits:     bitvector.New([]byte{0x0}, 1),
 					children: nil,
 				},
 			},
 		},
 		{
-			name:   "route covering node replaces it",
-			routes: []bitslice.BitSlice{{0, 0}, {0}},
+			name: "route covering node replaces it",
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 2),
+				bitvector.New([]byte{0x0}, 1),
+			},
 			expected: &RSTrie{
 				root: &node{
-					bits:     bitslice.BitSlice{0},
+					bits:     bitvector.New([]byte{0x0}, 1),
 					children: nil,
 				},
 			},
 		},
 		{
 			name: "completed subtries are simpliflied",
-			routes: []bitslice.BitSlice{
-				{1},
-				{0, 1},
-				{0, 0, 1},
-				{0, 0, 0},
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x80}, 1),
+				bitvector.New([]byte{0x40}, 2),
+				bitvector.New([]byte{0x20}, 3),
+				bitvector.New([]byte{0x0}, 3),
 			},
 			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
+				bits:     bitvector.BitVector{},
 				children: nil,
 			}},
 		},
 		{
 			name: "completed subtries are simplified when new route covers current",
-			routes: []bitslice.BitSlice{
-				{0, 0},
-				{0, 1, 1},
-				{0, 1},
+			routes: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 2),
+				bitvector.New([]byte{0x60}, 3),
+				bitvector.New([]byte{0x40}, 2),
 			},
 			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{0},
+				bits:     bitvector.New([]byte{0x0}, 1),
 				children: nil,
 			}},
 		},
@@ -176,57 +156,60 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
 		trie     RSTrie
-		expected []bitslice.BitSlice
+		expected []bitvector.BitVector
 	}{
 		{
 			name: "complete trie",
 			trie: RSTrie{
 				root: &node{
-					bits:     nil,
+					bits:     bitvector.BitVector{},
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{}},
+			expected: []bitvector.BitVector{{}},
 		},
 		{
 			name: "empty trie",
 			trie: RSTrie{
 				root: nil,
 			},
-			expected: []bitslice.BitSlice{},
+			expected: []bitvector.BitVector{},
 		},
 		{
 			name: "single zero-child trie",
 			trie: RSTrie{
 				root: &node{
-					bits:     bitslice.BitSlice{0},
+					bits:     bitvector.New([]byte{0x0}, 1),
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{0}},
+			expected: []bitvector.BitVector{bitvector.New([]byte{0x0}, 1)},
 		},
 		{
 			name: "single one-child trie",
 			trie: RSTrie{
 				root: &node{
-					bits:     bitslice.BitSlice{1},
+					bits:     bitvector.New([]byte{0x80}, 1),
 					children: nil,
 				},
 			},
-			expected: []bitslice.BitSlice{{1}},
+			expected: []bitvector.BitVector{bitvector.New([]byte{0x80}, 1)},
 		},
 		{
 			name: "two-level trie",
 			trie: RSTrie{
 				root: &node{
-					bits: bitslice.BitSlice{0, 0},
+					bits: bitvector.New([]byte{0x0}, 2),
 					children: &[2]*node{
-						0: {bits: bitslice.BitSlice{0}},
-						1: {bits: bitslice.BitSlice{1, 0}},
+						0: {bits: bitvector.New([]byte{0x0}, 1)},
+						1: {bits: bitvector.New([]byte{0x80}, 2)},
 					},
 				},
 			},
-			expected: []bitslice.BitSlice{{0, 0, 0}, {0, 0, 1, 0}},
+			expected: []bitvector.BitVector{
+				bitvector.New([]byte{0x0}, 3),
+				bitvector.New([]byte{0x20}, 4),
+			},
 		},
 	}
 
