@@ -3,7 +3,9 @@ package routesum
 
 import (
 	"fmt"
+	"iter"
 	"net/netip"
+	"slices"
 	"strings"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
@@ -98,34 +100,44 @@ func ipBitsForIP(ip netip.Addr) (bitslice.BitSlice, error) {
 }
 
 // SummaryStrings returns a summary of all received routes as a string slice.
+// Deprecated: Each() is preferred.
 func (rs *RouteSum) SummaryStrings() []string {
-	strs := []string{}
+	return slices.Collect(rs.Each())
+}
 
-	ipv4BitSlices := rs.ipv4.Contents()
-	for _, bits := range ipv4BitSlices {
-		ip := ipv4FromBits(bits)
+// Each returns an iterator that returns each IP or prefix stored.
+func (rs *RouteSum) Each() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for bits := range rs.ipv4.Each() {
+			ip := ipv4FromBits(bits)
 
-		if len(bits) == 8*4 {
-			strs = append(strs, ip.String())
-		} else {
-			prefix := netip.PrefixFrom(ip, len(bits))
-			strs = append(strs, prefix.String())
+			if len(bits) == 8*4 {
+				if !yield(ip.String()) {
+					return
+				}
+			} else {
+				prefix := netip.PrefixFrom(ip, len(bits))
+				if !yield(prefix.String()) {
+					return
+				}
+			}
+		}
+
+		for bits := range rs.ipv6.Each() {
+			ip := ipv6FromBits(bits)
+
+			if len(bits) == 8*16 {
+				if !yield(ip.String()) {
+					return
+				}
+			} else {
+				prefix := netip.PrefixFrom(ip, len(bits))
+				if !yield(prefix.String()) {
+					return
+				}
+			}
 		}
 	}
-
-	ipv6BitSlices := rs.ipv6.Contents()
-	for _, bits := range ipv6BitSlices {
-		ip := ipv6FromBits(bits)
-
-		if len(bits) == 8*16 {
-			strs = append(strs, ip.String())
-		} else {
-			prefix := netip.PrefixFrom(ip, len(bits))
-			strs = append(strs, prefix.String())
-		}
-	}
-
-	return strs
 }
 
 func ipv4FromBits(bits bitslice.BitSlice) netip.Addr {

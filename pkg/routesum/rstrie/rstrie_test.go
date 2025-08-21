@@ -1,6 +1,7 @@
 package rstrie
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
@@ -53,6 +54,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			name:   "add one child",
 			routes: []bitslice.BitSlice{{0}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -62,15 +64,19 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 		{
 			name:   "add two children, completing the root node's subtrie",
 			routes: []bitslice.BitSlice{{0}, {1}},
-			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
-				children: nil,
-			}},
+			expected: &RSTrie{
+				mu: sync.RWMutex{},
+				root: &node{
+					bits:     bitslice.BitSlice{},
+					children: nil,
+				},
+			},
 		},
 		{
 			name:   "split root, root is empty",
 			routes: []bitslice.BitSlice{{0, 0}, {1, 1}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{},
 					children: &[2]*node{
@@ -84,6 +90,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			name:   "split root, root is not empty",
 			routes: []bitslice.BitSlice{{0, 0}, {0, 1, 0}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{0},
 					children: &[2]*node{
@@ -97,6 +104,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			name:   "split root, traverse, and split internal",
 			routes: []bitslice.BitSlice{{0}, {1, 0, 0}, {1, 1, 0}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{},
 					children: &[2]*node{
@@ -116,6 +124,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			name:   "covered routes are ignored",
 			routes: []bitslice.BitSlice{{0}, {0, 0}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -126,6 +135,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 			name:   "route covering node replaces it",
 			routes: []bitslice.BitSlice{{0, 0}, {0}},
 			expected: &RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -140,10 +150,13 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				{0, 0, 1},
 				{0, 0, 0},
 			},
-			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{},
-				children: nil,
-			}},
+			expected: &RSTrie{
+				mu: sync.RWMutex{},
+				root: &node{
+					bits:     bitslice.BitSlice{},
+					children: nil,
+				},
+			},
 		},
 		{
 			name: "completed subtries are simplified when new route covers current",
@@ -152,10 +165,13 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				{0, 1, 1},
 				{0, 1},
 			},
-			expected: &RSTrie{root: &node{
-				bits:     bitslice.BitSlice{0},
-				children: nil,
-			}},
+			expected: &RSTrie{
+				mu: sync.RWMutex{},
+				root: &node{
+					bits:     bitslice.BitSlice{0},
+					children: nil,
+				},
+			},
 		},
 	}
 
@@ -181,6 +197,7 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 		{
 			name: "complete trie",
 			trie: RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     nil,
 					children: nil,
@@ -191,13 +208,15 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 		{
 			name: "empty trie",
 			trie: RSTrie{
+				mu:   sync.RWMutex{},
 				root: nil,
 			},
-			expected: []bitslice.BitSlice{},
+			expected: []bitslice.BitSlice(nil),
 		},
 		{
 			name: "single zero-child trie",
 			trie: RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     bitslice.BitSlice{0},
 					children: nil,
@@ -208,6 +227,7 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 		{
 			name: "single one-child trie",
 			trie: RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits:     bitslice.BitSlice{1},
 					children: nil,
@@ -218,6 +238,7 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 		{
 			name: "two-level trie",
 			trie: RSTrie{
+				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{0, 0},
 					children: &[2]*node{
@@ -230,9 +251,9 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.expected, test.trie.Contents(), "got expected bits")
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			assert.Equal(t, tests[i].expected, tests[i].trie.Contents(), "got expected bits")
 		})
 	}
 }
