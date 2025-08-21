@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.4.0
+
+* Add an iter.Seq output method to rstrie
+* Deprecate rstrie.Contents in favor of the iterator method
+* Add an iter.Seq output method to routesum
+* Deprecate routesum.SummaryStrings in favor of the iterator method
+* Prepare rstrie for concurrency
+
 ## 0.3.0 (2025-08-17)
 
 * Replace inet.af with net/netip, which removes the `unsafe` dependency
