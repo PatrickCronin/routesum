@@ -21,8 +21,8 @@ type RSTrie struct {
 }
 
 type node struct {
-	children *[2]*node
 	bits     bitslice.BitSlice
+	children *[2]node
 }
 
 // NewRSTrie returns an initialized RSTrie for use
@@ -50,7 +50,7 @@ func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
 		return
 	}
 
-	t.root.insertRoute(&t.root, routeBits)
+	t.root.insertRoute(routeBits)
 }
 
 func (n *node) isLeaf() bool {
@@ -58,7 +58,7 @@ func (n *node) isLeaf() bool {
 }
 
 // parent is a **node so that we can change what the parent is pointing to if we need to!
-func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) bool {
+func (n *node) insertRoute(remainingRouteBits bitslice.BitSlice) bool {
 	remainingRouteBitsLen := len(remainingRouteBits)
 	curNodeBitsLen := len(n.bits)
 
@@ -77,7 +77,7 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 
 		// Otherwise, we traverse to the correct child.
 		whichChild := remainingRouteBits[curNodeBitsLen]
-		if n.children[whichChild].insertRoute(&n.children[whichChild], remainingRouteBits[curNodeBitsLen:]) {
+		if n.children[whichChild].insertRoute(remainingRouteBits[curNodeBitsLen:]) {
 			return n.maybeRemoveRedundantChildren()
 		}
 
@@ -98,7 +98,7 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 		return true
 	}
 
-	*parent = splitNodeForRoute(n, remainingRouteBits)
+	*n = splitNodeForRoute(n, remainingRouteBits)
 	return n.maybeRemoveRedundantChildren()
 }
 
@@ -114,22 +114,22 @@ func commonPrefixLen(a, b bitslice.BitSlice) int {
 	return i
 }
 
-func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) *node {
+func splitNodeForRoute(oldNode *node, routeBits bitslice.BitSlice) node {
 	commonBitsLen := commonPrefixLen(oldNode.bits, routeBits)
 	commonBits := oldNode.bits[:commonBitsLen]
 
-	routeNode := &node{
+	routeNode := node{
 		bits:     routeBits[commonBitsLen:],
 		children: nil,
 	}
 	oldNode.bits = oldNode.bits[commonBitsLen:]
 
-	newNode := &node{
+	newNode := node{
 		bits:     commonBits,
-		children: &[2]*node{},
+		children: &[2]node{},
 	}
 	newNode.children[routeNode.bits[0]] = routeNode
-	newNode.children[oldNode.bits[0]] = oldNode
+	newNode.children[oldNode.bits[0]] = *oldNode
 
 	return newNode
 }
@@ -155,7 +155,7 @@ func (n *node) maybeRemoveRedundantChildren() bool {
 }
 
 type traversalStep struct {
-	n                  *node
+	n                  node
 	precedingRouteBits bitslice.BitSlice
 }
 
@@ -180,7 +180,7 @@ func (t *RSTrie) Each() iter.Seq[bitslice.BitSlice] {
 
 		remainingSteps := list.New()
 		remainingSteps.PushFront(traversalStep{
-			n:                  t.root,
+			n:                  *t.root,
 			precedingRouteBits: bitslice.BitSlice{},
 		})
 

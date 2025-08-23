@@ -79,7 +79,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{},
-					children: &[2]*node{
+					children: &[2]node{
 						0: {bits: bitslice.BitSlice{0, 0}},
 						1: {bits: bitslice.BitSlice{1, 1}},
 					},
@@ -93,7 +93,7 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{0},
-					children: &[2]*node{
+					children: &[2]node{
 						0: {bits: bitslice.BitSlice{0}},
 						1: {bits: bitslice.BitSlice{1, 0}},
 					},
@@ -107,11 +107,11 @@ func TestRSTrieInsertRoute(t *testing.T) { //nolint: funlen
 				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{},
-					children: &[2]*node{
+					children: &[2]node{
 						0: {bits: bitslice.BitSlice{0}},
 						1: {
 							bits: bitslice.BitSlice{1},
-							children: &[2]*node{
+							children: &[2]node{
 								0: {bits: bitslice.BitSlice{0, 0}},
 								1: {bits: bitslice.BitSlice{1, 0}},
 							},
@@ -241,7 +241,7 @@ func TestRSTrieContents(t *testing.T) { //nolint: funlen
 				mu: sync.RWMutex{},
 				root: &node{
 					bits: bitslice.BitSlice{0, 0},
-					children: &[2]*node{
+					children: &[2]node{
 						0: {bits: bitslice.BitSlice{0}},
 						1: {bits: bitslice.BitSlice{1, 0}},
 					},
