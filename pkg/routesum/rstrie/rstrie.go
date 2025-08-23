@@ -11,9 +11,10 @@ import (
 	"github.com/PatrickCronin/routesum/pkg/routesum/bitslice"
 )
 
-// RSTrie is a radix-like trie of radix 2 whose stored "words" are the binary representations of networks and IPs. An
-// optimization rstrie makes over a generic radix tree is that since routes covered by other routes don't need to be
-// stored, each node in the trie will have either 0 or 2 children; never 1.
+// RSTrie is a radix-like trie of radix 2 whose stored "words" are the binary representations of
+// networks and IPs. An optimization rstrie makes over a generic radix tree is that since routes
+// covered by other routes don't need to be stored, each node in the trie will have either 0 or 2
+// children; never 1.
 type RSTrie struct {
 	mu   sync.RWMutex
 	root *node
@@ -32,10 +33,10 @@ func NewRSTrie() *RSTrie {
 	}
 }
 
-// InsertRoute inserts a new BitSlice into the trie. Each insert results in a space-optimized trie structure
-// representing its contents. If a route being inserted is already covered by an existing route, it's simply ignored. If
-// a route being inserted covers one or more routes already in the trie, those nodes are removed and replaced by the new
-// route.
+// InsertRoute inserts a new BitSlice into the trie. Each insert results in a space-optimized trie
+// structure representing its contents. If a route being inserted is already covered by an existing
+// route, it's simply ignored. If a route being inserted covers one or more routes already in the
+// trie, those nodes are removed and replaced by the new route.
 func (t *RSTrie) InsertRoute(routeBits bitslice.BitSlice) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -83,10 +84,12 @@ func (n *node) insertRoute(parent **node, remainingRouteBits bitslice.BitSlice) 
 		return false
 	}
 
-	// Otherwise the requested route diverges from the current node. We'll need to split the current node.
+	// Otherwise the requested route diverges from the current node. We'll need to split the current
+	// node.
 
-	// As an optimization, if the split would result in a new node whose children represent a complete subtrie, we
-	// just update the current node, instead of allocating new nodes and optimizing them away immediately after.
+	// As an optimization, if the split would result in a new node whose children represent a
+	// complete subtrie, we just update the current node, instead of allocating new nodes and
+	// optimizing them away immediately after.
 	if n.isLeaf() &&
 		curNodeBitsLen == remainingRouteBitsLen &&
 		commonPrefixLen(n.bits, remainingRouteBits) == len(n.bits)-1 {
