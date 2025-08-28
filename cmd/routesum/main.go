@@ -9,6 +9,8 @@ import (
 	"os"
 
 	"github.com/PatrickCronin/routesum/pkg/routesum"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -19,22 +21,49 @@ func main() {
 }
 
 func summarize(in io.Reader, out io.Writer) error {
+	input := make(chan string)
+	var g errgroup.Group
+
+	// Create a new route sum and a go-routine to fill it.
 	rs := routesum.NewRouteSum()
-	scanner := bufio.NewScanner(in)
-	for scanner.Scan() {
-		line := bytes.TrimSpace(scanner.Bytes())
-		if len(line) == 0 {
-			continue
+	g.Go(func() error {
+		for {
+			line, ok := <-input
+
+			if !ok {
+				return nil
+			}
+
+			if err := rs.InsertFromString(line); err != nil {
+				return errors.Wrap(err, "add line to input")
+			}
+		}
+	})
+
+	// Create a go-routeine to read the input and send it to the route sum.
+	g.Go(func() error {
+		scanner := bufio.NewScanner(in)
+		for scanner.Scan() {
+			line := bytes.TrimSpace(scanner.Bytes())
+			if len(line) == 0 {
+				continue
+			}
+
+			input <- string(line)
 		}
 
-		if err := rs.InsertFromString(string(line)); err != nil {
-			return fmt.Errorf("add string: %w", err)
-		}
+		close(input)
+
+		return errors.Wrap(scanner.Err(), "read input")
+	})
+
+	if err := g.Wait(); err != nil {
+		return errors.Wrap(err, "load tries")
 	}
 
 	for s := range rs.Each() {
 		if _, err := out.Write([]byte(s + "\n")); err != nil {
-			return fmt.Errorf("write output: %w", err)
+			return errors.Wrap(err, "write output")
 		}
 	}
 
