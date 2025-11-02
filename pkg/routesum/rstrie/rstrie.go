@@ -157,6 +157,7 @@ type traversalStep struct {
 }
 
 // Contents returns the BitSlices contained in the RSTrie.
+//
 // Deprecated: Each() is preferred.
 func (t *RSTrie) Contents() []bitslice.BitSlice {
 	t.mu.RLock()
