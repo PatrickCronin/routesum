@@ -100,6 +100,7 @@ func ipBitsForIP(ip netip.Addr) (bitslice.BitSlice, error) {
 }
 
 // SummaryStrings returns a summary of all received routes as a string slice.
+//
 // Deprecated: Each() is preferred.
 func (rs *RouteSum) SummaryStrings() []string {
 	return slices.Collect(rs.Each())
