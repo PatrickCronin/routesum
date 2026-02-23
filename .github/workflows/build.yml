@@ -6,25 +6,31 @@ on:
   schedule:
     - cron: "0 4 * * SUN"
 
+permissions: {}
+
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.25.x', '1.24.x']
+        go-version: ['1.26.x', '1.25.x']
         include:
-          - go-version: '1.25.x'
+          - go-version: '1.26.x'
             build-coverage: true
+    permissions:
+      contents: read
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
 
       - name: Get dependencies
         run: |
@@ -41,14 +47,14 @@ jobs:
         run: ${{ format('go test -race -coverprofile=cover.{0}.gcov -covermode=atomic ./...', matrix.go-version) }}
 
       - name: Convert coverage output to lcov
-        uses: jandelgado/gcov2lcov-action@v1
+        uses: jandelgado/gcov2lcov-action@e4612787670fc5b5f49026b8c29c5569921de1db
         with:
           infile: ${{ format('cover.{0}.gcov', matrix.go-version) }}
           outfile: ${{ format('cover.{0}.lcov', matrix.go-version) }}
         if: matrix.build-coverage && success()
 
       - name: Upload coverage
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ format('cover.{0}.lcov', matrix.go-version) }}

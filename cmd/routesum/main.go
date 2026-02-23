@@ -13,7 +13,7 @@ import (
 
 func main() {
 	if err := summarize(os.Stdin, os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "summarize: %s\n", err.Error())
+		fmt.Fprintf(os.Stderr, "summarize: %s\n", err.Error()) //nolint: gosec
 		os.Exit(1)
 	}
 }
