@@ -185,7 +185,7 @@ func (t *RSTrie) Each() iter.Seq[bitslice.BitSlice] {
 		for remainingSteps.Len() > 0 {
 			step := remainingSteps.Remove(remainingSteps.Front()).(traversalStep)
 
-			stepRouteBits := bitslice.BitSlice{}
+			stepRouteBits := make(bitslice.BitSlice, 0, len(step.precedingRouteBits)+len(step.n.bits))
 			stepRouteBits = append(stepRouteBits, step.precedingRouteBits...)
 			stepRouteBits = append(stepRouteBits, step.n.bits...)
 
