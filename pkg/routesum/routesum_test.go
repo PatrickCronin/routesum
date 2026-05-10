@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:goconst // The make-up of each IP used is more important than the fact that some are popular across tests.
 func TestStrings(t *testing.T) { //nolint: funlen
 	// Summarization logic is tested in TestSummarize.
 
@@ -115,6 +116,7 @@ func TestStrings(t *testing.T) { //nolint: funlen
 	}
 }
 
+//nolint:goconst // The make-up of each IP used is more important than the fact that some are popular across tests.
 func TestSummarize(t *testing.T) { //nolint: funlen
 	tests := []struct {
 		name     string
